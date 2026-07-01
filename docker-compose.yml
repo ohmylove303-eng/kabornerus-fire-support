@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./demo:/app/demo
+    environment:
+      - SECRET_KEY=KABORNERUS_DEMO_KEY_CHANGE_IN_PROD
+      - ALLOWED_ORIGINS=http://localhost:3000
+      - DEMO_VIDEO_PATH=/app/demo/drone_feed_demo.mp4
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_WS_URL=ws://localhost:8000
+      - REACT_APP_CESIUM_TOKEN=YOUR_CESIUM_ION_TOKEN_HERE
+    depends_on:
+      backend:
+        condition: service_healthy
