@@ -1,4 +1,4 @@
-# ⚡ 카번개루스 화력운용 시스템 (Kabornerus Fire Support System)
+# ⚡ 우루루쾅 화력운용 시스템 (Ururukwang Fire Support System)
 
 > **Palantir Edge AI 기반 3D 전장 가시화 및 실시간 드론 화력 유도 시뮬레이터**  
 > YOLOv8 표적 탐지 · WebSocket 50ms 이하 실시간 스트림 · CesiumJS 3D 피해 돔 · MIL-STD-6016 J-series 패킷
@@ -27,7 +27,7 @@
 
 ## 🎯 시스템 개요
 
-카번개루스는 드론 영상에서 군사 표적을 실시간 탐지하고, 3D 지도 위에 피해 반경을 시각화하며, 화력 임무를 관리하는 **교육/시뮬레이션 목적** 시스템입니다.
+우루루쾅은 드론 영상에서 군사 표적을 실시간 탐지하고, 3D 지도 위에 피해 반경을 시각화하며, 화력 임무를 관리하는 **교육/시뮬레이션 목적** 시스템입니다.
 
 ### 핵심 기능
 
@@ -63,10 +63,10 @@
 │  │ <50ms 목표   │  │ Dome 계산   │  │ J7 패킷 생성  │  │
 │  └──────┬───────┘  └─────────────┘  └───────────────┘  │
 │         │                                                │
-│  ┌──────▼──────────────────────────────────────────┐    │
-│  │         AI Pipeline (YOLOv8m ONNX)              │    │
-│  │  Preprocess → Inference → NMS → 표적DB 매칭     │    │
-│  └─────────────────────────────────────────────────┘    │
+│  ┌──────▼────────────────────────────────────────────┐  │
+│  │         AI Pipeline (YOLOv8m ONNX)                │  │
+│  │  Preprocess → Inference → NMS → 표적DB 매칭       │  │
+│  └───────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
           │ GPU/CPU
 ┌─────────▼──────────────────────────────────────────────┐
@@ -78,8 +78,6 @@
 ---
 
 ## 💻 요구사항
-
-### 최소 사양
 
 | 항목 | 최소 | 권장 |
 |------|------|------|
@@ -99,8 +97,8 @@
 ### 1단계 — 클론
 
 ```bash
-git clone https://github.com/ohmylove303-eng/kabornerus-fire-support.git
-cd kabornerus-fire-support
+git clone https://github.com/ohmylove303-eng/ururukwang-fire-support.git
+cd ururukwang-fire-support
 ```
 
 ### 2단계 — 환경변수 설정
@@ -132,7 +130,7 @@ docker-compose up -d
 | ⚙️ 백엔드 API | http://localhost:8000 |
 | 📚 API 문서 | http://localhost:8000/docs |
 
-> **기본 로그인**: `admin` / `kabornerus2026!`
+> **기본 로그인**: `admin` / `ururukwang2026!`
 
 ---
 
@@ -147,11 +145,9 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 pip install -r requirements.txt
 
-# 환경변수 설정
 export JWT_SECRET_KEY="your-secret-key-min-32-chars"
 export DEMO_MODE=true
 
-# 실행
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -161,7 +157,6 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 cd frontend
 npm install
 
-# Cesium Ion 토큰 설정 (.env.local)
 echo "REACT_APP_CESIUM_ION_TOKEN=your_token_here" > .env.local
 echo "REACT_APP_API_URL=http://localhost:8000" >> .env.local
 
@@ -173,26 +168,24 @@ npm run dev
 
 ## 🎮 데모 실행
 
-### 데모 시나리오 1: 단일 드론 표적 탐지
+### 시나리오 1: 단일 드론 표적 탐지
 
 ```bash
-# 데모 드론 영상 시뮬레이터 실행
 cd backend
-python scripts/demo_drone_simulator.py --drone-id KR-01 --fps 15
+python scripts/demo_drone_simulator.py --drone-id URQ-01 --fps 15
 
 # 브라우저에서:
 # 1. http://localhost:3000 접속
-# 2. 좌측 DroneVideoPanel에서 KR-01 피드 확인
+# 2. 좌측 DroneVideoPanel에서 URQ-01 피드 확인
 # 3. 표적 탐지 시 TargetSignalCard 자동 팝업
 # 4. 3D 지도에 피해 돔 자동 렌더링
 ```
 
-### 데모 시나리오 2: 다중 드론 + 화력 임무
+### 시나리오 2: 다중 드론 + 화력 임무
 
 ```bash
-# 2대 드론 동시 시뮬레이션
-python scripts/demo_drone_simulator.py --drone-id KR-01 &
-python scripts/demo_drone_simulator.py --drone-id KR-02 &
+python scripts/demo_drone_simulator.py --drone-id URQ-01 &
+python scripts/demo_drone_simulator.py --drone-id URQ-02 &
 
 # 브라우저에서:
 # 1. 우측 OCO 화력 주문표에서 표적 확인
@@ -201,7 +194,7 @@ python scripts/demo_drone_simulator.py --drone-id KR-02 &
 # 4. 🔄 재타격 버튼으로 대안 부대 확인
 ```
 
-### 데모 시나리오 3: 3D/2D/SPLIT 뷰 전환
+### 시나리오 3: 3D/2D/SPLIT 뷰 전환
 
 ```
 상단 헤더 → [🌐 3D] [🗺️ 2D] [⊞ SPLIT] 버튼 클릭
@@ -211,35 +204,28 @@ python scripts/demo_drone_simulator.py --drone-id KR-02 &
 
 ## 🤖 YOLOv8 파인튜닝
 
-### 데이터 수집 + 학습 (100 epoch)
-
 ```bash
 cd ai
 
-# 1. Roboflow 데이터셋 다운로드 (API키 필요)
+# 1. Roboflow 데이터셋 다운로드
 python dataset/collect_datasets.py YOUR_ROBOFLOW_API_KEY
 
 # 2. OSINT 커스텀 이미지 배치
 # ai/dataset/custom/2S19_MSTA/    ← 최소 50장
 # ai/dataset/custom/M1978_Koksan/ ← 최소 30장
 
-# 3. 레이블링 (LabelImg)
+# 3. 레이블링
 pip install labelimg
 labelimg ai/dataset/custom/2S19_MSTA
 
 # 4. 데이터셋 통합
 python dataset/merge_datasets.py
 
-# 5. 2단계 파인튜닝 실행
-python train/finetune_kabornerus.py
-# Stage 1: 백본 동결 20epoch
-# Stage 2: 전체 언프리즈 80epoch
-# 예상 소요: RTX 3080 기준 ~3.5시간
-
-# 6. ONNX/TFLite 변환 (자동 실행됨)
-# ai/models/kabornerus_v1.pt
-# ai/models/kabornerus_v1.onnx
-# ai/models/kabornerus_v1_int8.tflite
+# 5. 파인튜닝 (100 epoch)
+python train/finetune_ururukwang.py
+# → ai/models/ururukwang_v1.pt
+# → ai/models/ururukwang_v1.onnx
+# → ai/models/ururukwang_v1_int8.tflite
 ```
 
 ### 지원 클래스
@@ -261,58 +247,58 @@ python train/finetune_kabornerus.py
 ## 📁 프로젝트 구조
 
 ```
-kabornerus-fire-support/
+ururukwang-fire-support/
 ├── 📄 README.md
 ├── 📄 docker-compose.yml
 ├── 📄 .env.example
 │
 ├── 🐍 backend/
-│   ├── main.py                          # FastAPI 진입점
+│   ├── main.py
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   ├── ai/
-│   │   ├── target_pipeline.py           # YOLOv8 추론 파이프라인
-│   │   ├── export_pipeline.py           # ONNX/TFLite 변환
-│   │   └── models/                      # 학습된 모델 가중치
+│   │   ├── target_pipeline.py
+│   │   ├── export_pipeline.py
+│   │   └── models/
 │   ├── ws/
-│   │   └── ultra_low_latency.py         # WebSocket <50ms 스트리머
+│   │   └── ultra_low_latency.py
 │   ├── edge/
-│   │   └── resource_manager.py          # 다중 드론 자원 관리
+│   │   └── resource_manager.py
 │   ├── comms/
-│   │   └── military_packet.py           # MIL-STD-6016 J-series 패킷
+│   │   └── military_packet.py
 │   ├── security/
-│   │   └── auth.py                      # JWT + RBAC
+│   │   └── auth.py
 │   └── scripts/
-│       └── demo_drone_simulator.py      # 데모용 드론 시뮬레이터
+│       └── demo_drone_simulator.py
 │
 ├── ⚛️  frontend/
 │   ├── src/
-│   │   ├── App.tsx                      # 3-Panel 통합 레이아웃
-│   │   ├── App.css                      # 전술 UI 스타일
+│   │   ├── App.tsx
+│   │   ├── App.css
 │   │   ├── components/
-│   │   │   ├── DroneVideoPanel.tsx      # 드론 영상 + BBox 렌더링
-│   │   │   ├── CesiumMap3D.tsx          # CesiumJS 3D 지도
-│   │   │   ├── LeafletMap2D.tsx         # 2D 전술 지도
-│   │   │   ├── FireMissionLog.tsx       # 화력 임무 이력
-│   │   │   └── WeaponOCOTable.tsx       # OCO 화력 주문표
+│   │   │   ├── DroneVideoPanel.tsx
+│   │   │   ├── CesiumMap3D.tsx
+│   │   │   ├── LeafletMap2D.tsx
+│   │   │   ├── FireMissionLog.tsx
+│   │   │   └── WeaponOCOTable.tsx
 │   │   ├── engine/
-│   │   │   ├── DamageDomeManager.ts     # CesiumJS 피해 돔 렌더러
-│   │   │   └── MultiDroneTracker.ts     # 다중 드론 항적 추적
+│   │   │   ├── DamageDomeManager.ts
+│   │   │   └── MultiDroneTracker.ts
 │   │   ├── utils/
-│   │   │   └── packetParser.ts          # msgpack 바이너리 파서
+│   │   │   └── packetParser.ts
 │   │   └── types/
-│   │       └── index.ts                 # 공유 TypeScript 타입
+│   │       └── index.ts
 │   ├── package.json
-│   ├── tsconfig.json                    # strict: true
+│   ├── tsconfig.json
 │   └── Dockerfile
 │
 └── 🤖 ai/
     ├── dataset/
-    │   ├── collect_datasets.py          # Roboflow 다운로드
-    │   ├── merge_datasets.py            # 다중 소스 통합
-    │   └── augment.py                   # 전장 특화 증강
+    │   ├── collect_datasets.py
+    │   ├── merge_datasets.py
+    │   └── augment.py
     └── train/
-        └── finetune_kabornerus.py       # 100 epoch 파인튜닝
+        └── finetune_ururukwang.py
 ```
 
 ---
@@ -336,10 +322,10 @@ kabornerus-fire-support/
 | GET | `/api/system/status` | 시스템 상태 |
 | POST | `/auth/login` | JWT 토큰 발급 |
 
-### 바이너리 패킷 구조 (WebSocket)
+### 바이너리 패킷 구조
 
 ```
-[2B magic=KR][4B seq][8B ts_ms][2B det_len][4B jpeg_len]
+[2B magic=UR][4B seq][8B ts_ms][2B det_len][4B jpeg_len]
 [det_len bytes: msgpack 탐지 데이터]
 [jpeg_len bytes: JPEG 프레임]
 ```
@@ -368,5 +354,5 @@ DEMO / EDUCATIONAL USE ONLY
 ---
 
 <div align="center">
-⚡ <b>카번개루스 화력운용 시스템 v1.0 DEMO</b> ⚡
+⚡ <b>우루루쾅 화력운용 시스템 v1.0 DEMO</b> ⚡
 </div>
