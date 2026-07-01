@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ 우루루쾅 화력운용 시스템 — DEMO</title>
+<style>
+  :root {
+    --bg: #0a0e0a;
+    --panel: #0d130d;
+    --border: #1a2e1a;
+    --green: #00ff41;
+    --green-dim: #00a82a;
+    --red: #ff2020;
+    --orange: #ff6a00;
+    --yellow: #ffe100;
+    --blue: #00cfff;
+    --text: #c8ffc8;
+    --text-dim: #5a8a5a;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── 헤더 ── */
+  header {
+    background: #060d06;
+    border-bottom: 1px solid var(--green-dim);
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .header-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green);
+    letter-spacing: 2px;
+  }
+  .header-status { display:flex; gap:16px; font-size:11px; }
+  .status-item { display:flex; align-items:center; gap:5px; }
+  .dot { width:7px; height:7px; border-radius:50%; animation: blink 1.2s infinite; }
+  .dot.green  { background:var(--green); box-shadow:0 0 6px var(--green); }
+  .dot.red    { background:var(--red);   box-shadow:0 0 6px var(--red); animation-delay:.4s; }
+  .dot.blue   { background:var(--blue);  box-shadow:0 0 6px var(--blue); animation-delay:.8s; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .latency { color:var(--green); font-size:11px; }
+  .time-display { color:var(--text-dim); font-size:11px; }
+
+  /* ── 3-패널 레이아웃 ── */
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr 1fr;
+    gap: 6px;
+    padding: 6px;
+    flex: 1;
+    min-height: 0;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .panel-header {
+    background: #0a150a;
+    border-bottom: 1px solid var(--border);
+    padding: 5px 10px;
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .panel-header span { color: var(--green); font-weight:bold; }
+
+  /* ── 드론 영상 패널 (좌) ── */
+  #drone-canvas-wrap {
+    flex:1; position:relative; overflow:hidden;
+    background: #050f05;
+  }
+  #droneCanvas { width:100%; height:100%; display:block; }
+  .drone-hud {
+    position:absolute; top:6px; left:6px;
+    font-size:9px; color:var(--green); line-height:1.8;
+    text-shadow:0 0 4px var(--green);
+    pointer-events:none;
+  }
+  .drone-hud.right {
+    left:auto; right:6px; text-align:right;
+  }
+  .crosshair {
+    position:absolute;
+    pointer-events:none;
+    transition: all 0.3s ease;
+  }
+  .crosshair::before, .crosshair::after {
+    content:''; position:absolute;
+    background: rgba(255,32,32,0.8);
+  }
+  .crosshair::before { width:20px; height:1px; top:50%; left:50%; transform:translate(-50%,-50%); }
+  .crosshair::after  { width:1px; height:20px; top:50%; left:50%; transform:translate(-50%,-50%); }
+
+  /* BBox 오버레이 */
+  .bbox {
+    position:absolute;
+    border: 2px solid;
+    pointer-events:none;
+    transition: all 0.4s ease;
+  }
+  .bbox-label {
+    position:absolute;
+    top:-18px; left:0;
+    font-size:9px;
+    font-weight:bold;
+    padding:1px 4px;
+    white-space:nowrap;
+  }
+
+  /* ── 지도 패널 (중) ── */
+  #mapCanvas { width:100%; flex:1; display:block; }
+  .map-controls {
+    display:flex; gap:4px; padding:5px 8px;
+    border-top:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .map-btn {
+    flex:1; padding:4px;
+    background: #0a180a;
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    font-size:10px;
+    cursor:pointer;
+    border-radius:2px;
+    transition:all .2s;
+    font-family:'Courier New',monospace;
+  }
+  .map-btn:hover, .map-btn.active {
+    background: #0f2a0f;
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  /* ── OCO 패널 (우) ── */
+  .oco-panel { flex:1; overflow-y:auto; padding:8px; }
+  .oco-panel::-webkit-scrollbar { width:4px; }
+  .oco-panel::-webkit-scrollbar-track { background:#0a150a; }
+  .oco-panel::-webkit-scrollbar-thumb { background:var(--green-dim); }
+
+  .target-card {
+    border: 1px solid var(--border);
+    border-radius:3px;
+    margin-bottom:8px;
+    overflow:hidden;
+    transition: border-color .3s;
+  }
+  .target-card.active { border-color: var(--red); }
+  .target-card.approved { border-color: var(--green); }
+  .tc-header {
+    background:#0a1a0a; padding:5px 8px;
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:10px;
+  }
+  .tc-class { color:var(--red); font-weight:bold; font-size:10px; }
+  .tc-conf { color:var(--yellow); font-size:9px; }
+  .tc-body { padding:6px 8px; font-size:9px; color:var(--text-dim); line-height:1.8; }
+  .tc-body b { color:var(--text); }
+  .tc-actions { padding:5px 8px; display:flex; gap:5px; }
+  .btn-fire {
+    flex:1; padding:5px;
+    background: #1a0000;
+    border:1px solid var(--red);
+    color:var(--red);
+    font-size:10px; font-weight:bold;
+    cursor:pointer;
+    border-radius:2px;
+    font-family:'Courier New',monospace;
+    transition:all .2s;
+    animation: fire-pulse 2s infinite;
+  }
+  .btn-fire:hover { background:#2a0000; box-shadow:0 0 10px var(--red); }
+  .btn-fire.confirm {
+    background:#002200;
+    border-color:var(--green);
+    color:var(--green);
+    animation:none;
+  }
+  .btn-approved {
+    flex:1; padding:5px;
+    background:#002200;
+    border:1px solid var(--green);
+    color:var(--green);
+    font-size:10px;
+    border-radius:2px;
+    font-family:'Courier New',monospace;
+    text-align:center;
+  }
+  @keyframes fire-pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+  .weapon-rec {
+    background:#0a1a0a;
+    border:1px solid var(--border);
+    border-radius:3px;
+    padding:6px 8px;
+    margin-bottom:6px;
+    font-size:9px;
+  }
+  .weapon-rec-title { color:var(--blue); font-size:10px; margin-bottom:4px; }
+  .weapon-item {
+    display:flex; justify-content:space-between;
+    padding:2px 0; border-bottom:1px solid #0f200f;
+    color:var(--text-dim);
+  }
+  .weapon-item:last-child { border:none; }
+  .weapon-item .wname { color:var(--text); }
+
+  /* ── 임무 로그 ── */
+  .mission-log {
+    border-top:1px solid var(--border);
+    padding:5px 8px;
+    height:90px;
+    overflow-y:auto;
+    flex-shrink:0;
+  }
+  .mission-log::-webkit-scrollbar { width:3px; }
+  .mission-log::-webkit-scrollbar-thumb { background:var(--green-dim); }
+  .log-title { font-size:9px; color:var(--text-dim); margin-bottom:3px; }
+  .log-entry {
+    font-size:9px; line-height:1.6;
+    border-bottom:1px solid #0a150a;
+    padding:1px 0;
+  }
+  .log-entry .ts { color:var(--text-dim); }
+  .log-entry .msg { color:var(--text); }
+  .log-entry.warn .msg { color:var(--yellow); }
+  .log-entry.ok   .msg { color:var(--green); }
+  .log-entry.fire .msg { color:var(--red); }
+
+  /* ── 하단 바 ── */
+  footer {
+    background:#060d06;
+    border-top:1px solid var(--border);
+    padding:4px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:9px;
+    color:var(--text-dim);
+    flex-shrink:0;
+  }
+  footer .footer-items { display:flex; gap:16px; }
+  .f-item { display:flex; align-items:center; gap:4px; }
+  .f-item .val { color:var(--green); }
+  .f-item .val.red { color:var(--red); }
+
+  /* ── 돔 폭발 애니메이션 ── */
+  @keyframes dome-expand {
+    0%   { r: 0; opacity:.9; }
+    70%  { opacity:.6; }
+    100% { r: 80; opacity:0; }
+  }
+  @keyframes dome-ring {
+    0%   { stroke-dashoffset: 600; opacity:.8; }
+    100% { stroke-dashoffset: 0;   opacity:0; }
+  }
+  .scan-line {
+    position:absolute; top:0; left:0; width:100%; height:2px;
+    background: linear-gradient(transparent, var(--green), transparent);
+    animation: scan 3s linear infinite;
+    opacity:.15; pointer-events:none;
+  }
+  @keyframes scan { 0%{top:0} 100%{top:100%} }
+</style>
+</head>
+<body>
+
+<!-- ── 헤더 ── -->
+<header>
+  <div class="header-title">⚡ 우루루쾅 화력운용 시스템 v1.0 · DEMO</div>
+  <div class="header-status">
+    <div class="status-item"><div class="dot green"></div><span style="font-size:11px">URQ-01 ACTIVE</span></div>
+    <div class="status-item"><div class="dot green"></div><span style="font-size:11px">URQ-02 ACTIVE</span></div>
+    <div class="status-item"><div class="dot blue"></div><span style="font-size:11px">AI ONLINE</span></div>
+    <div class="status-item"><div class="dot red"></div><span style="font-size:11px">2 TARGETS</span></div>
+  </div>
+  <div style="display:flex;gap:16px;align-items:center">
+    <div class="latency">⚡ <span id="latency">46</span>ms</div>
+    <div class="time-display" id="clock"></div>
+  </div>
+</header>
+
+<!-- ── 3패널 ── -->
+<div class="panels">
+
+  <!-- 좌: 드론 영상 -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>🎥 DRONE FEED</span>
+      <span id="drone-id">URQ-01 · 15fps</span>
+    </div>
+    <div id="drone-canvas-wrap">
+      <canvas id="droneCanvas"></canvas>
+      <div class="drone-hud">
+        ALT: <span id="hud-alt">124</span>m<br>
+        SPD: <span id="hud-spd">12.4</span>m/s<br>
+        HDG: <span id="hud-hdg">247</span>°
+      </div>
+      <div class="drone-hud right">
+        LAT: 37.4563°N<br>
+        LON: 126.9812°E<br>
+        <span style="color:var(--red)" id="rec-blink">● REC</span>
+      </div>
+      <div class="scan-line"></div>
+    </div>
+  </div>
+
+  <!-- 중: 전술 지도 -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>🗺️ TACTICAL MAP</span>
+      <span id="map-mode-label">3D CESIUM</span>
+    </div>
+    <canvas id="mapCanvas"></canvas>
+    <div class="map-controls">
+      <button class="map-btn active" onclick="setMapMode('3d')">🌐 3D</button>
+      <button class="map-btn" onclick="setMapMode('2d')">🗺️ 2D</button>
+      <button class="map-btn" onclick="setMapMode('split')">⊞ SPLIT</button>
+      <button class="map-btn" onclick="triggerStrike()" style="border-color:var(--red);color:var(--red);">💥 TEST STRIKE</button>
+    </div>
+  </div>
+
+  <!-- 우: OCO 화력 주문표 -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>🔴 OCO FIRE MISSION</span>
+      <span id="mission-count">2 TARGETS</span>
+    </div>
+    <div class="oco-panel" id="oco-panel">
+
+      <!-- 타겟 카드 1 -->
+      <div class="target-card active" id="tc1">
+        <div class="tc-header">
+          <span class="tc-class">⚠ 2S19_MSTA</span>
+          <span class="tc-conf">CONF: 87%</span>
+        </div>
+        <div class="tc-body">
+          <b>좌표:</b> 37.4521°N 126.9744°E<br>
+          <b>거리:</b> 3.2km | <b>방위:</b> 247°<br>
+          <b>속도:</b> 4.2m/s → NW<br>
+          <b>위협등급:</b> <span style="color:var(--red)">HIGH</span>
+        </div>
+        <div class="weapon-rec">
+          <div class="weapon-rec-title">🎯 타격수단 권고</div>
+          <div class="weapon-item"><span class="wname">K-9 자주포</span><span>우선도 1</span></div>
+          <div class="weapon-item"><span class="wname">MLRS</span><span>우선도 2</span></div>
+        </div>
+        <div class="tc-actions" id="tc1-actions">
+          <button class="btn-fire" id="btn-tc1" onclick="fireBtnClick(1)">🎯 교전 승인</button>
+        </div>
+      </div>
+
+      <!-- 타겟 카드 2 -->
+      <div class="target-card" id="tc2">
+        <div class="tc-header">
+          <span class="tc-class">⚠ T72_series</span>
+          <span class="tc-conf">CONF: 74%</span>
+        </div>
+        <div class="tc-body">
+          <b>좌표:</b> 37.4598°N 126.9801°E<br>
+          <b>거리:</b> 4.1km | <b>방위:</b> 312°<br>
+          <b>속도:</b> 2.1m/s → N<br>
+          <b>위협등급:</b> <span style="color:var(--orange)">MEDIUM</span>
+        </div>
+        <div class="weapon-rec">
+          <div class="weapon-rec-title">🎯 타격수단 권고</div>
+          <div class="weapon-item"><span class="wname">AH-64 아파치</span><span>우선도 1</span></div>
+          <div class="weapon-item"><span class="wname">K-9 자주포</span><span>우선도 2</span></div>
+        </div>
+        <div class="tc-actions" id="tc2-actions">
+          <button class="btn-fire" id="btn-tc2" onclick="fireBtnClick(2)">🎯 교전 승인</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 임무 로그 -->
+    <div class="mission-log">
+      <div class="log-title">📋 MISSION LOG</div>
+      <div id="log-container"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 하단 바 -->
+<footer>
+  <div class="footer-items">
+    <div class="f-item">SYSTEM: <span class="val">ONLINE</span></div>
+    <div class="f-item">DRONES: <span class="val">2/8</span></div>
+    <div class="f-item">LATENCY: <span class="val" id="f-latency">46ms</span></div>
+    <div class="f-item">TARGETS: <span class="val red" id="f-targets">2</span></div>
+    <div class="f-item">MISSIONS: <span class="val" id="f-missions">0</span></div>
+  </div>
+  <div>⚡ 우루루쾅 FSS · DEMO / EDUCATIONAL USE ONLY</div>
+</footer>
+
+<script>
+// ════════════════════════════════════
+// 전역 상태
+// ════════════════════════════════════
+let mapMode = '3d';
+let frameIdx = 0;
+let missions = 0;
+let targets = 2;
+let domes = [];       // 폭발 돔 목록
+let dronePos = [{x:.45,y:.55},{x:.62,y:.38}];
+let bboxes = [
+  {x:.28,y:.42,w:.22,h:.18,cls:'2S19_MSTA',conf:.87,color:'#ff2020'},
+  {x:.58,y:.28,w:.18,h:.14,cls:'T72_series',conf:.74,color:'#ff6a00'},
+];
+let tc1State = 'idle'; // idle → confirm → approved
+let tc2State = 'idle';
+let flashTargets = [];
+
+// ════════════════════════════════════
+// 시계
+// ════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('ko-KR',{hour12:false}) + ' KST';
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// 레이턴시 지글거림
+setInterval(()=>{
+  const v = 42 + Math.floor(Math.random()*12);
+  document.getElementById('latency').textContent = v;
+  document.getElementById('f-latency').textContent = v+'ms';
+},800);
+
+// HUD 지글거림
+setInterval(()=>{
+  document.getElementById('hud-alt').textContent = (122+Math.random()*4).toFixed(0);
+  document.getElementById('hud-spd').textContent = (11.5+Math.random()*2).toFixed(1);
+  document.getElementById('hud-hdg').textContent = (244+Math.random()*6).toFixed(0);
+},600);
+
+// REC 깜빡임
+let recOn=true;
+setInterval(()=>{
+  recOn=!recOn;
+  document.getElementById('rec-blink').style.opacity=recOn?1:0;
+},700);
+
+// ════════════════════════════════════
+// 드론 캔버스
+// ════════════════════════════════════
+const dCanvas = document.getElementById('droneCanvas');
+const dCtx    = dCanvas.getContext('2d');
+
+function resizeDroneCanvas() {
+  const wrap = document.getElementById('drone-canvas-wrap');
+  dCanvas.width  = wrap.clientWidth;
+  dCanvas.height = wrap.clientHeight;
+}
+
+function drawDroneFrame() {
+  const W = dCanvas.width, H = dCanvas.height;
+  const t = frameIdx * 0.04;
+
+  // 배경 지형
+  dCtx.fillStyle = '#061206';
+  dCtx.fillRect(0,0,W,H);
+
+  // 지형 노이즈 패치
+  for(let i=0;i<40;i++){
+    const nx = (Math.sin(i*37.4+t*.1)*0.5+0.5)*W;
+    const ny = (Math.cos(i*19.7+t*.08)*0.5+0.5)*H;
+    const r  = 8+Math.sin(i*5.3)*6;
+    const alpha = 0.04+Math.sin(i+t*.05)*0.02;
+    dCtx.beginPath();
+    dCtx.arc(nx,ny,r,0,Math.PI*2);
+    dCtx.fillStyle=`rgba(20,50,15,${alpha})`;
+    dCtx.fill();
+  }
+
+  // 도로
+  dCtx.strokeStyle='rgba(80,100,60,0.3)';
+  dCtx.lineWidth=3;
+  dCtx.beginPath(); dCtx.moveTo(0,H*.5); dCtx.lineTo(W,H*.48); dCtx.stroke();
+  dCtx.beginPath(); dCtx.moveTo(W*.3,0); dCtx.lineTo(W*.35,H); dCtx.stroke();
+
+  // BBox 차량들
+  bboxes.forEach((bb,i)=>{
+    // 차량 이동 시뮬
+    const dx = Math.sin(t+i*1.3)*0.006;
+    const dy = Math.cos(t*0.7+i*2.1)*0.004;
+    bb.x = Math.max(0.05, Math.min(0.75, bb.x+dx));
+    bb.y = Math.max(0.05, Math.min(0.78, bb.y+dy));
+
+    const px=bb.x*W, py=bb.y*H, pw=bb.w*W, ph=bb.h*H;
+
+    // 차체
+    dCtx.fillStyle = i===0 ? '#2a4018' : '#1e3212';
+    dCtx.fillRect(px,py,pw,ph);
+    // 포신
+    dCtx.strokeStyle=i===0?'#4a6028':'#3a5020';
+    dCtx.lineWidth=4;
+    dCtx.beginPath();
+    dCtx.moveTo(px+pw*.5,py+ph*.5);
+    dCtx.lineTo(px+pw*1.2,py+ph*.3);
+    dCtx.stroke();
+
+    // BBox 테두리
+    const alpha = 0.7 + Math.sin(t*3+i)*0.3;
+    dCtx.strokeStyle = bb.color.replace(')',`,${alpha})`).replace('rgb(','rgba(');
+    dCtx.strokeStyle = bb.color;
+    dCtx.globalAlpha = alpha;
+    dCtx.lineWidth = 2;
+    dCtx.strokeRect(px,py,pw,ph);
+    dCtx.globalAlpha = 1;
+
+    // 모서리 마커
+    const cs=8;
+    dCtx.strokeStyle=bb.color;
+    dCtx.lineWidth=2;
+    [[px,py],[px+pw,py],[px,py+ph],[px+pw,py+ph]].forEach(([cx,cy])=>{
+      dCtx.beginPath();
+      dCtx.moveTo(cx+(cx>px+pw/2?-cs:cs),cy); dCtx.lineTo(cx,cy); dCtx.lineTo(cx,cy+(cy>py+ph/2?-cs:cs));
+      dCtx.stroke();
+    });
+
+    // 레이블
+    dCtx.fillStyle=bb.color;
+    dCtx.font='bold 9px Courier New';
+    dCtx.fillText(`${bb.cls} ${(bb.conf*100).toFixed(0)}%`, px, py-3);
+  });
+
+  // 스캔라인 오버레이
+  const scanY = (t*60)%H;
+  const grad = dCtx.createLinearGradient(0,scanY-10,0,scanY+10);
+  grad.addColorStop(0,'transparent');
+  grad.addColorStop(0.5,'rgba(0,255,65,0.06)');
+  grad.addColorStop(1,'transparent');
+  dCtx.fillStyle=grad;
+  dCtx.fillRect(0,scanY-10,W,20);
+
+  // 크로스헤어 (화면 중앙)
+  const cx=W/2, cy=H/2;
+  dCtx.strokeStyle='rgba(0,255,65,0.5)';
+  dCtx.lineWidth=1;
+  dCtx.beginPath(); dCtx.moveTo(cx-15,cy); dCtx.lineTo(cx+15,cy); dCtx.stroke();
+  dCtx.beginPath(); dCtx.moveTo(cx,cy-15); dCtx.lineTo(cx,cy+15); dCtx.stroke();
+  dCtx.beginPath(); dCtx.arc(cx,cy,20,0,Math.PI*2); dCtx.stroke();
+
+  frameIdx++;
+  requestAnimationFrame(drawDroneFrame);
+}
+
+// ════════════════════════════════════
+// 전술 지도 캔버스
+// ════════════════════════════════════
+const mCanvas = document.getElementById('mapCanvas');
+const mCtx    = mCanvas.getContext('2d');
+
+function resizeMapCanvas() {
+  const panel = mCanvas.parentElement;
+  mCanvas.width  = panel.clientWidth;
+  mCanvas.height = panel.clientHeight - 70;
+}
+
+let mapT = 0;
+function drawMap() {
+  const W = mCanvas.width, H = mCanvas.height;
+  mapT += 0.016;
+
+  mCtx.fillStyle = '#040e04';
+  mCtx.fillRect(0,0,W,H);
+
+  if(mapMode === '3d') drawMap3D(W,H);
+  else if(mapMode === '2d') drawMap2D(W,H);
+  else { drawMap3D(W/2,H,0,0); drawMap2D(W/2,H,W/2,0); }
+
+  requestAnimationFrame(drawMap);
+}
+
+function drawMap3D(W,H,ox=0,oy=0) {
+  // 지구 원
+  mCtx.save();
+  mCtx.translate(ox,oy);
+
+  // 배경
+  const bgGrad = mCtx.createRadialGradient(W/2,H/2,10,W/2,H/2,Math.min(W,H)*.48);
+  bgGrad.addColorStop(0,'#0a1e0a');
+  bgGrad.addColorStop(1,'#040a04');
+  mCtx.beginPath();
+  mCtx.arc(W/2,H/2,Math.min(W,H)*.46,0,Math.PI*2);
+  mCtx.fillStyle=bgGrad;
+  mCtx.fill();
+  mCtx.strokeStyle='#1a3a1a';
+  mCtx.lineWidth=1;
+  mCtx.stroke();
+
+  // 위도선
+  for(let lat=-60;lat<=60;lat+=20){
+    const y = H/2 + (lat/90)*(H*.42);
+    const half = Math.sqrt(Math.max(0,(H*.46)**2 - (y-H/2)**2));
+    mCtx.beginPath();
+    mCtx.ellipse(W/2,y,half,half*.2,0,0,Math.PI*2);
+    mCtx.strokeStyle='rgba(0,80,20,0.3)';
+    mCtx.lineWidth=.5;
+    mCtx.stroke();
+  }
+  // 경도선
+  for(let i=0;i<8;i++){
+    const angle = (i/8)*Math.PI*2 + mapT*.1;
+    mCtx.beginPath();
+    mCtx.ellipse(W/2,H/2,Math.sin(angle)*W*.46,H*.46,0,0,Math.PI*2);
+    mCtx.strokeStyle='rgba(0,80,20,0.2)';
+    mCtx.lineWidth=.5;
+    mCtx.stroke();
+  }
+
+  // 한반도 윤곽선 (간략)
+  mCtx.strokeStyle='rgba(0,200,80,0.6)';
+  mCtx.lineWidth=1.5;
+  mCtx.beginPath();
+  const kp = [
+    [.48,.28],[.52,.30],[.55,.36],[.53,.44],[.50,.52],
+    [.48,.58],[.47,.62],[.49,.66],[.51,.64],[.52,.58],
+    [.54,.52],[.57,.46],[.56,.40],[.54,.34],[.52,.30]
+  ];
+  kp.forEach(([x,y],i)=>{
+    i===0?mCtx.moveTo(x*W,y*H):mCtx.lineTo(x*W,y*H);
+  });
+  mCtx.stroke();
+
+  // 드론 아이콘
+  dronePos.forEach((dp,i)=>{
+    dp.x += Math.sin(mapT*1.1+i*2)*0.001;
+    dp.y += Math.cos(mapT*.9+i*1.5)*0.001;
+    const px=dp.x*W, py=dp.y*H;
+    // 경로
+    mCtx.strokeStyle=`rgba(0,200,255,${0.2+Math.sin(mapT+i)*.1})`;
+    mCtx.lineWidth=1;
+    mCtx.setLineDash([3,5]);
+    mCtx.beginPath();
+    for(let j=0;j<10;j++){
+      const bx=px - Math.sin(mapT*1.1+i*2+j*.1)*j*W*.003;
+      const by=py - Math.cos(mapT*.9+i*1.5+j*.1)*j*H*.003;
+      j===0?mCtx.moveTo(bx,by):mCtx.lineTo(bx,by);
+    }
+    mCtx.stroke();
+    mCtx.setLineDash([]);
+
+    // 드론 심벌
+    mCtx.fillStyle='#00cfff';
+    mCtx.font='bold 12px Courier New';
+    mCtx.fillText('✈',px-6,py+4);
+    mCtx.fillStyle='rgba(0,200,255,0.6)';
+    mCtx.font='8px Courier New';
+    mCtx.fillText(`URQ-0${i+1}`,px-10,py-6);
+  });
+
+  // 표적 마커
+  const tgts = [{x:.47,y:.52},{x:.53,y:.42}];
+  tgts.forEach((tg,i)=>{
+    const px=tg.x*W, py=tg.y*H;
+    const blink = Math.sin(mapT*4+i)*0.5+0.5;
+    mCtx.strokeStyle=`rgba(255,32,32,${0.5+blink*.5})`;
+    mCtx.lineWidth=1.5;
+    mCtx.beginPath();
+    mCtx.arc(px,py,6+blink*2,0,Math.PI*2);
+    mCtx.stroke();
+    mCtx.fillStyle=`rgba(255,32,32,${0.8+blink*.2})`;
+    mCtx.beginPath();
+    mCtx.arc(px,py,3,0,Math.PI*2);
+    mCtx.fill();
+    mCtx.fillStyle='#ff2020';
+    mCtx.font='8px Courier New';
+    mCtx.fillText(i===0?'2S19':'T-72',px+8,py+3);
+  });
+
+  // 폭발 돔
+  domes = domes.filter(d=>d.life>0);
+  domes.forEach(d=>{
+    d.life--;
+    const p = 1 - d.life/120;
+    const r = p*Math.min(W,H)*.18;
+    // 충격파 원
+    [.6,.35,.15].forEach((alpha,j)=>{
+      const ri = r*(1-j*.2);
+      mCtx.beginPath();
+      mCtx.arc(d.x*W,d.y*H,ri,0,Math.PI*2);
+      const col = j===0?`rgba(255,100,0,${alpha*(1-p)})`:
+                  j===1?`rgba(255,200,0,${alpha*(1-p)})`:
+                       `rgba(255,255,200,${alpha*(1-p)})`;
+      mCtx.strokeStyle=col;
+      mCtx.lineWidth=2-j*.5;
+      mCtx.stroke();
+    });
+    // 피해 돔 채우기
+    if(p<0.5){
+      const grad2=mCtx.createRadialGradient(d.x*W,d.y*H,0,d.x*W,d.y*H,r);
+      grad2.addColorStop(0,`rgba(255,200,50,${.3*(1-p*2)})`);
+      grad2.addColorStop(1,'transparent');
+      mCtx.beginPath();
+      mCtx.arc(d.x*W,d.y*H,r,0,Math.PI*2);
+      mCtx.fillStyle=grad2;
+      mCtx.fill();
+    }
+    // 클래스 라벨
+    if(d.life>60){
+      mCtx.fillStyle='rgba(255,100,0,0.9)';
+      mCtx.font='bold 9px Courier New';
+      mCtx.fillText('💥 DESTROYED',d.x*W-30,d.y*H-r-5);
+    }
+  });
+
+  // SPLIT 구분선
+  if(mapMode==='split'){
+    mCtx.strokeStyle='var(--green-dim)';
+    mCtx.lineWidth=1;
+    mCtx.beginPath();
+    mCtx.moveTo(W,0); mCtx.lineTo(W,H);
+    mCtx.stroke();
+    mCtx.fillStyle='rgba(0,200,50,0.8)';
+    mCtx.font='8px Courier New';
+    mCtx.fillText('3D',W-20,12);
+  }
+
+  mCtx.restore();
+}
+
+function drawMap2D(W,H,ox=0,oy=0) {
+  mCtx.save();
+  mCtx.translate(ox,oy);
+
+  // 2D 배경
+  mCtx.fillStyle='#030f03';
+  mCtx.fillRect(0,0,W,H);
+
+  // 그리드
+  mCtx.strokeStyle='rgba(0,60,15,0.4)';
+  mCtx.lineWidth=.5;
+  for(let x=0;x<W;x+=W/10){
+    mCtx.beginPath(); mCtx.moveTo(x,0); mCtx.lineTo(x,H); mCtx.stroke();
+  }
+  for(let y=0;y<H;y+=H/8){
+    mCtx.beginPath(); mCtx.moveTo(0,y); mCtx.lineTo(W,y); mCtx.stroke();
+  }
+
+  // 지형 (등고선)
+  for(let i=0;i<6;i++){
+    mCtx.strokeStyle=`rgba(0,${60+i*15},20,0.3)`;
+    mCtx.lineWidth=.8;
+    mCtx.beginPath();
+    for(let x=0;x<=W;x+=4){
+      const y = H*.4 + Math.sin(x*.015+i*.8+mapT*.2)*H*(.03+i*.02)
+               + Math.cos(x*.025+i*1.2)*H*.02;
+      x===0?mCtx.moveTo(x,y):mCtx.lineTo(x,y);
+    }
+    mCtx.stroke();
+  }
+
+  // 드론 아이콘 2D
+  dronePos.forEach((dp,i)=>{
+    const px=dp.x*W, py=dp.y*H;
+    mCtx.strokeStyle='rgba(0,200,255,0.7)';
+    mCtx.lineWidth=1;
+    mCtx.setLineDash([2,4]);
+    mCtx.beginPath();
+    for(let j=0;j<8;j++){
+      const bx=px-Math.sin(mapT+i)*j*W*.003;
+      const by=py-Math.cos(mapT*.7+i)*j*H*.004;
+      j===0?mCtx.moveTo(bx,by):mCtx.lineTo(bx,by);
+    }
+    mCtx.stroke();
+    mCtx.setLineDash([]);
+    mCtx.fillStyle='#00cfff';
+    mCtx.beginPath();
+    mCtx.arc(px,py,4,0,Math.PI*2);
+    mCtx.fill();
+    mCtx.fillStyle='rgba(0,200,255,0.8)';
+    mCtx.font='8px Courier New';
+    mCtx.fillText(`URQ-0${i+1}`,px+6,py-4);
+  });
+
+  // 표적 2D
+  [{x:.47,y:.52,n:'2S19'},{x:.53,y:.42,n:'T-72'}].forEach((tg,i)=>{
+    const px=tg.x*W, py=tg.y*H;
+    const blink=Math.sin(mapT*4+i)*.5+.5;
+    mCtx.strokeStyle=`rgba(255,32,32,${.6+blink*.4})`;
+    mCtx.lineWidth=1.5;
+    mCtx.beginPath();
+    mCtx.moveTo(px-6,py-6); mCtx.lineTo(px+6,py-6);
+    mCtx.lineTo(px+6,py+6); mCtx.lineTo(px-6,py+6); mCtx.closePath();
+    mCtx.stroke();
+    mCtx.fillStyle='rgba(255,32,32,.6)';
+    mCtx.fill();
+    mCtx.fillStyle='#ff4040';
+    mCtx.font='8px Courier New';
+    mCtx.fillText(tg.n,px+9,py+3);
+  });
+
+  // 폭발 2D
+  domes.forEach(d=>{
+    const p=1-d.life/120;
+    const r=p*Math.min(W,H)*.12;
+    mCtx.beginPath();
+    mCtx.arc(d.x*W,d.y*H,r,0,Math.PI*2);
+    mCtx.strokeStyle=`rgba(255,120,0,${.8*(1-p)})`;
+    mCtx.lineWidth=2;
+    mCtx.stroke();
+  });
+
+  if(mapMode==='split'){
+    mCtx.fillStyle='rgba(0,200,50,0.8)';
+    mCtx.font='8px Courier New';
+    mCtx.fillText('2D',8,12);
+  }
+
+  mCtx.restore();
+}
+
+// ════════════════════════════════════
+// 교전 승인 로직
+// ════════════════════════════════════
+let tc1Step=0, tc2Step=0;
+
+function fireBtnClick(id){
+  if(id===1){
+    if(tc1Step===0){
+      tc1Step=1;
+      document.getElementById('btn-tc1').textContent='⚠️ 확인 (2/2)';
+      document.getElementById('btn-tc1').classList.add('confirm');
+      addLog('warn','TC1: 교전 승인 대기중... 확인 필요');
+    } else if(tc1Step===1){
+      tc1Step=2;
+      approveTarget(1);
+    }
+  } else {
+    if(tc2Step===0){
+      tc2Step=1;
+      document.getElementById('btn-tc2').textContent='⚠️ 확인 (2/2)';
+      document.getElementById('btn-tc2').classList.add('confirm');
+      addLog('warn','TC2: 교전 승인 대기중... 확인 필요');
+    } else if(tc2Step===1){
+      tc2Step=2;
+      approveTarget(2);
+    }
+  }
+}
+
+function approveTarget(id){
+  missions++;
+  targets = Math.max(0, targets-1);
+  document.getElementById('f-missions').textContent = missions;
+  document.getElementById('f-targets').textContent  = targets;
+  document.getElementById('mission-count').textContent = targets+' TARGETS';
+
+  const card  = document.getElementById('tc'+id);
+  const acts  = document.getElementById('tc'+id+'-actions');
+  card.classList.remove('active');
+  card.classList.add('approved');
+  acts.innerHTML = '<div class="btn-approved">✅ 교전 승인 완료</div>';
+
+  addLog('fire','🔴 J7 패킷 전송: 표적 TC'+id+' 교전 명령');
+  addLog('ok','✅ TC'+id+' 교전 승인 완료 — 피해 돔 렌더링');
+
+  // 폭발 돔 트리거
+  const pos = id===1 ? {x:.47,y:.52} : {x:.53,y:.42};
+  triggerDome(pos.x, pos.y);
+}
+
+function triggerStrike(){
+  const rx = .4 + Math.random()*.2;
+  const ry = .35 + Math.random()*.3;
+  triggerDome(rx,ry);
+  addLog('fire','💥 TEST STRIKE 실행: ('+rx.toFixed(2)+', '+ry.toFixed(2)+')');
+}
+
+function triggerDome(x,y){
+  domes.push({x,y,life:120});
+}
+
+// ════════════════════════════════════
+// 지도 모드
+// ════════════════════════════════════
+function setMapMode(mode){
+  mapMode=mode;
+  document.querySelectorAll('.map-btn').forEach(b=>b.classList.remove('active'));
+  const labels={'3d':'3D CESIUM','2d':'2D TACTICAL','split':'SPLIT VIEW'};
+  document.getElementById('map-mode-label').textContent=labels[mode];
+  // 클릭된 버튼 active
+  event.target.classList.add('active');
+  addLog('ok','지도 모드 변경: '+labels[mode]);
+}
+
+// ════════════════════════════════════
+// 임무 로그
+// ════════════════════════════════════
+const logMsgs = [
+  ['ok',   'URQ-01 연결 확립 — 15fps 스트림'],
+  ['ok',   'URQ-02 연결 확립 — 15fps 스트림'],
+  ['ok',   'YOLOv8m ONNX 모델 로드 완료'],
+  ['warn', '표적 탐지: 2S19_MSTA (CONF 87%)'],
+  ['warn', '표적 탐지: T72_series (CONF 74%)'],
+  ['ok',   'WebSocket 레이턴시 46ms — 정상'],
+];
+let logIdx=0;
+
+function addLog(type, msg){
+  const now=new Date().toLocaleTimeString('ko-KR',{hour12:false});
+  const div=document.createElement('div');
+  div.className='log-entry '+type;
+  div.innerHTML=`<span class="ts">[${now}]</span> <span class="msg">${msg}</span>`;
+  const container=document.getElementById('log-container');
+  container.prepend(div);
+  if(container.children.length>20) container.removeChild(container.lastChild);
+}
+
+function autoLog(){
+  if(logIdx<logMsgs.length){
+    addLog(logMsgs[logIdx][0],logMsgs[logIdx][1]);
+    logIdx++;
+    setTimeout(autoLog,800);
+  }
+}
+
+// ════════════════════════════════════
+// 초기화
+// ════════════════════════════════════
+window.addEventListener('resize',()=>{
+  resizeDroneCanvas();
+  resizeMapCanvas();
+});
+resizeDroneCanvas();
+resizeMapCanvas();
+drawDroneFrame();
+drawMap();
+autoLog();
+
+// 3초 후 자동 드론 전환
+setInterval(()=>{
+  const ids=['URQ-01','URQ-02','URQ-01'];
+  const idx=Math.floor(Date.now()/5000)%2;
+  document.getElementById('drone-id').textContent=ids[idx]+' · 15fps';
+},5000);
+
+// 자동 로그 반복
+setInterval(()=>{
+  const msgs=[
+    ['ok','레이턴시 체크: '+( 40+Math.floor(Math.random()*15))+'ms'],
+    ['ok','프레임 수신: '+frameIdx+'f'],
+    ['warn','표적 위치 갱신 — 이동 감지'],
+    ['ok','엣지 리소스: CPU 34% 정상'],
+  ];
+  const r=msgs[Math.floor(Math.random()*msgs.length)];
+  addLog(r[0],r[1]);
+},3000);
+</script>
+</body>
+</html>
