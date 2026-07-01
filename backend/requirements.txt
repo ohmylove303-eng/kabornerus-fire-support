@@ -1,15 +1,38 @@
+# 카번개루스 백엔드 의존성
+# Python 3.11+
+
+# ── 웹 프레임워크 ──
 fastapi==0.115.0
 uvicorn[standard]==0.30.0
-websockets==13.0
-opencv-python-headless==4.10.0.84
-ultralytics==8.2.0
-onnxruntime==1.19.0
-numpy==1.26.4
-msgpack==1.1.0
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-psutil==6.0.0
 python-multipart==0.0.9
-httpx==0.27.0
-# uvloop 선택적 (Linux/Mac)
-# uvloop==0.19.0
+
+# ── AI / 비전 ──
+ultralytics==8.3.0
+onnxruntime==1.19.0
+# onnxruntime-gpu==1.19.0  # GPU 사용 시 위 줄 주석 처리 후 이 줄 활성화
+opencv-python-headless==4.10.0.84
+albumentations==1.4.10
+numpy==1.26.4
+
+# ── 직렬화 / 통신 ──
+msgpack==1.0.8
+websockets==13.0
+
+# ── 보안 ──
+python-jose[cryptography]==3.3.0
+bcrypt==4.1.3
+passlib[bcrypt]==1.7.4
+
+# ── 유틸리티 ──
+psutil==6.0.0
+pyyaml==6.0.1
+python-dotenv==1.0.1
+rich==13.7.0
+tqdm==4.66.5
+
+# ── 데이터셋 수집 ──
+roboflow==1.1.35
+huggingface_hub==0.24.0
+
+# ── uvloop (Linux/Mac 성능 향상) ──
+uvloop==0.19.0; sys_platform != 'win32'
