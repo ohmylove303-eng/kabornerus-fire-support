@@ -2,979 +2,904 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚡ 우루루쾅 화력운용 시스템 — DEMO</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>⚡ 우루루쾅 FSS v2.0 — LIVE DEMO</title>
 <style>
-  :root {
-    --bg: #0a0e0a;
-    --panel: #0d130d;
-    --border: #1a2e1a;
-    --green: #00ff41;
-    --green-dim: #00a82a;
-    --red: #ff2020;
-    --orange: #ff6a00;
-    --yellow: #ffe100;
-    --blue: #00cfff;
-    --text: #c8ffc8;
-    --text-dim: #5a8a5a;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Courier New', monospace;
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#000;
+  color:#00ff41;
+  font-family:'Courier New',monospace;
+  height:100vh;overflow:hidden;
+  display:flex;flex-direction:column;
+  user-select:none;
+}
 
-  /* ── 헤더 ── */
-  header {
-    background: #060d06;
-    border-bottom: 1px solid var(--green-dim);
-    padding: 6px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
-  .header-title {
-    font-size: 13px;
-    font-weight: bold;
-    color: var(--green);
-    text-shadow: 0 0 8px var(--green);
-    letter-spacing: 2px;
-  }
-  .header-status { display:flex; gap:16px; font-size:11px; }
-  .status-item { display:flex; align-items:center; gap:5px; }
-  .dot { width:7px; height:7px; border-radius:50%; animation: blink 1.2s infinite; }
-  .dot.green  { background:var(--green); box-shadow:0 0 6px var(--green); }
-  .dot.red    { background:var(--red);   box-shadow:0 0 6px var(--red); animation-delay:.4s; }
-  .dot.blue   { background:var(--blue);  box-shadow:0 0 6px var(--blue); animation-delay:.8s; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-  .latency { color:var(--green); font-size:11px; }
-  .time-display { color:var(--text-dim); font-size:11px; }
+/* ─ 헤더 ─ */
+#hdr{
+  background:rgba(0,10,0,.95);
+  border-bottom:1px solid #0f3a0f;
+  padding:5px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;z-index:10;
+}
+.htitle{font-size:12px;font-weight:bold;color:#00ff41;
+  text-shadow:0 0 10px #00ff41;letter-spacing:2px}
+.hstats{display:flex;gap:14px;font-size:10px}
+.hstat{display:flex;align-items:center;gap:4px}
+.hstat .led{width:6px;height:6px;border-radius:50%}
+.led-g{background:#00ff41;box-shadow:0 0 6px #00ff41;animation:pb 1.2s infinite}
+.led-r{background:#ff2020;box-shadow:0 0 6px #ff2020;animation:pb 1s .3s infinite}
+.led-b{background:#00cfff;box-shadow:0 0 6px #00cfff;animation:pb 1.4s .7s infinite}
+@keyframes pb{0%,100%{opacity:1}50%{opacity:.25}}
+.hright{display:flex;gap:16px;font-size:10px;align-items:center}
+.lat-val{color:#00ff41;font-size:11px}
 
-  /* ── 3-패널 레이아웃 ── */
-  .panels {
-    display: grid;
-    grid-template-columns: 1fr 1.6fr 1fr;
-    gap: 6px;
-    padding: 6px;
-    flex: 1;
-    min-height: 0;
-  }
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-  }
-  .panel-header {
-    background: #0a150a;
-    border-bottom: 1px solid var(--border);
-    padding: 5px 10px;
-    font-size: 10px;
-    color: var(--green-dim);
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
-  .panel-header span { color: var(--green); font-weight:bold; }
+/* ─ 메인 레이아웃 ─ */
+#main{display:grid;grid-template-columns:1fr 1.55fr 1fr;gap:5px;padding:5px;flex:1;min-height:0}
+.pnl{background:#020802;border:1px solid #0f2a0f;border-radius:3px;
+  display:flex;flex-direction:column;overflow:hidden;position:relative}
+.pnl-hdr{background:#030e03;border-bottom:1px solid #0f2a0f;
+  padding:4px 10px;font-size:9px;color:#3a7a3a;letter-spacing:1px;
+  display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.pnl-hdr b{color:#00ff41}
 
-  /* ── 드론 영상 패널 (좌) ── */
-  #drone-canvas-wrap {
-    flex:1; position:relative; overflow:hidden;
-    background: #050f05;
-  }
-  #droneCanvas { width:100%; height:100%; display:block; }
-  .drone-hud {
-    position:absolute; top:6px; left:6px;
-    font-size:9px; color:var(--green); line-height:1.8;
-    text-shadow:0 0 4px var(--green);
-    pointer-events:none;
-  }
-  .drone-hud.right {
-    left:auto; right:6px; text-align:right;
-  }
-  .crosshair {
-    position:absolute;
-    pointer-events:none;
-    transition: all 0.3s ease;
-  }
-  .crosshair::before, .crosshair::after {
-    content:''; position:absolute;
-    background: rgba(255,32,32,0.8);
-  }
-  .crosshair::before { width:20px; height:1px; top:50%; left:50%; transform:translate(-50%,-50%); }
-  .crosshair::after  { width:1px; height:20px; top:50%; left:50%; transform:translate(-50%,-50%); }
+/* ─ 드론 피드 ─ */
+#dv{flex:1;position:relative;overflow:hidden;background:#000}
+#dv video{width:100%;height:100%;object-fit:cover;display:block;opacity:.0}
+#dv canvas{position:absolute;top:0;left:0;width:100%;height:100%}
 
-  /* BBox 오버레이 */
-  .bbox {
-    position:absolute;
-    border: 2px solid;
-    pointer-events:none;
-    transition: all 0.4s ease;
-  }
-  .bbox-label {
-    position:absolute;
-    top:-18px; left:0;
-    font-size:9px;
-    font-weight:bold;
-    padding:1px 4px;
-    white-space:nowrap;
-  }
+/* 드론 HUD 오버레이 */
+.dhud{
+  position:absolute;inset:0;
+  pointer-events:none;
+  display:grid;
+  grid-template-rows:1fr 1fr 1fr;
+}
+.dhud-top{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  padding:6px 8px;
+}
+.dhud-mid{
+  display:flex;justify-content:center;align-items:center;
+}
+.dhud-bot{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  padding:6px 8px;
+}
+.hud-block{font-size:9px;line-height:1.9;color:#00ff41;
+  text-shadow:0 0 5px #00ff41;background:rgba(0,0,0,.35);
+  padding:4px 6px;border:1px solid rgba(0,255,65,.2);border-radius:2px}
+.hud-block .lbl{color:#3a7a3a;font-size:8px}
+.hud-block .val{color:#00ff41}
+.hud-block .val.red{color:#ff4040}
+.hud-block .val.yel{color:#ffe100}
 
-  /* ── 지도 패널 (중) ── */
-  #mapCanvas { width:100%; flex:1; display:block; }
-  .map-controls {
-    display:flex; gap:4px; padding:5px 8px;
-    border-top:1px solid var(--border);
-    flex-shrink:0;
-  }
-  .map-btn {
-    flex:1; padding:4px;
-    background: #0a180a;
-    border:1px solid var(--border);
-    color:var(--text-dim);
-    font-size:10px;
-    cursor:pointer;
-    border-radius:2px;
-    transition:all .2s;
-    font-family:'Courier New',monospace;
-  }
-  .map-btn:hover, .map-btn.active {
-    background: #0f2a0f;
-    border-color: var(--green);
-    color: var(--green);
-  }
+/* 지평선 & 중앙 크로스헤어 */
+.hud-horizon{
+  position:absolute;
+  width:80px;height:80px;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+/* 스캔라인 */
+.scan{
+  position:absolute;left:0;width:100%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,255,65,.15),transparent);
+  animation:sc 4s linear infinite;pointer-events:none;
+}
+@keyframes sc{0%{top:0}100%{top:100%}}
 
-  /* ── OCO 패널 (우) ── */
-  .oco-panel { flex:1; overflow-y:auto; padding:8px; }
-  .oco-panel::-webkit-scrollbar { width:4px; }
-  .oco-panel::-webkit-scrollbar-track { background:#0a150a; }
-  .oco-panel::-webkit-scrollbar-thumb { background:var(--green-dim); }
+/* 지도 패널 */
+#mc{width:100%;flex:1;display:block}
+.map-btns{
+  display:flex;gap:4px;padding:4px 7px;
+  border-top:1px solid #0f2a0f;flex-shrink:0
+}
+.mb{
+  flex:1;padding:4px 2px;
+  background:#030e03;border:1px solid #0f2a0f;
+  color:#3a7a3a;font-size:9px;cursor:pointer;
+  border-radius:2px;font-family:'Courier New',monospace;
+  transition:all .15s
+}
+.mb:hover,.mb.on{background:#071407;border-color:#00ff41;color:#00ff41}
+.mb.strike{border-color:#ff2020;color:#ff2020}
+.mb.strike:hover{background:#1a0000;box-shadow:0 0 8px #ff2020}
 
-  .target-card {
-    border: 1px solid var(--border);
-    border-radius:3px;
-    margin-bottom:8px;
-    overflow:hidden;
-    transition: border-color .3s;
-  }
-  .target-card.active { border-color: var(--red); }
-  .target-card.approved { border-color: var(--green); }
-  .tc-header {
-    background:#0a1a0a; padding:5px 8px;
-    display:flex; align-items:center; justify-content:space-between;
-    font-size:10px;
-  }
-  .tc-class { color:var(--red); font-weight:bold; font-size:10px; }
-  .tc-conf { color:var(--yellow); font-size:9px; }
-  .tc-body { padding:6px 8px; font-size:9px; color:var(--text-dim); line-height:1.8; }
-  .tc-body b { color:var(--text); }
-  .tc-actions { padding:5px 8px; display:flex; gap:5px; }
-  .btn-fire {
-    flex:1; padding:5px;
-    background: #1a0000;
-    border:1px solid var(--red);
-    color:var(--red);
-    font-size:10px; font-weight:bold;
-    cursor:pointer;
-    border-radius:2px;
-    font-family:'Courier New',monospace;
-    transition:all .2s;
-    animation: fire-pulse 2s infinite;
-  }
-  .btn-fire:hover { background:#2a0000; box-shadow:0 0 10px var(--red); }
-  .btn-fire.confirm {
-    background:#002200;
-    border-color:var(--green);
-    color:var(--green);
-    animation:none;
-  }
-  .btn-approved {
-    flex:1; padding:5px;
-    background:#002200;
-    border:1px solid var(--green);
-    color:var(--green);
-    font-size:10px;
-    border-radius:2px;
-    font-family:'Courier New',monospace;
-    text-align:center;
-  }
-  @keyframes fire-pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+/* OCO 패널 */
+.oco-body{flex:1;overflow-y:auto;padding:7px}
+.oco-body::-webkit-scrollbar{width:3px}
+.oco-body::-webkit-scrollbar-thumb{background:#1a3a1a}
 
-  .weapon-rec {
-    background:#0a1a0a;
-    border:1px solid var(--border);
-    border-radius:3px;
-    padding:6px 8px;
-    margin-bottom:6px;
-    font-size:9px;
-  }
-  .weapon-rec-title { color:var(--blue); font-size:10px; margin-bottom:4px; }
-  .weapon-item {
-    display:flex; justify-content:space-between;
-    padding:2px 0; border-bottom:1px solid #0f200f;
-    color:var(--text-dim);
-  }
-  .weapon-item:last-child { border:none; }
-  .weapon-item .wname { color:var(--text); }
+.tc{
+  border:1px solid #0f2a0f;border-radius:3px;
+  margin-bottom:8px;overflow:hidden;
+  transition:border-color .3s;
+}
+.tc.hot{border-color:#ff2020}
+.tc.ok {border-color:#00ff41}
+.tc-hdr{
+  background:#030e03;padding:4px 8px;
+  display:flex;justify-content:space-between;
+  font-size:9px
+}
+.cls-red{color:#ff2020;font-weight:bold}
+.cls-ora{color:#ff6a00;font-weight:bold}
+.conf{color:#ffe100;font-size:8px}
+.tc-info{padding:5px 8px;font-size:8.5px;color:#3a7a3a;line-height:2}
+.tc-info b{color:#7aba7a}
+.wrec{
+  margin:0 8px 5px;padding:5px;
+  background:#030e03;border:1px solid #0f2a0f;border-radius:2px;
+  font-size:8.5px;
+}
+.wrec-ttl{color:#00cfff;font-size:9px;margin-bottom:3px}
+.wi{display:flex;justify-content:space-between;padding:2px 0;
+  border-bottom:1px solid #0a1a0a;color:#3a7a3a}
+.wi:last-child{border:none}
+.wi .wn{color:#7aba7a}
+.tc-act{padding:5px 8px;display:flex;gap:5px}
+.btn-f{
+  flex:1;padding:5px;
+  background:#0f0000;border:1px solid #ff2020;
+  color:#ff2020;font-size:9px;font-weight:bold;
+  cursor:pointer;border-radius:2px;
+  font-family:'Courier New',monospace;
+  animation:fp 1.8s infinite;
+}
+.btn-f:hover{background:#1f0000;box-shadow:0 0 12px #ff2020}
+.btn-f.cfm{background:#001400;border-color:#ffe100;color:#ffe100;animation:none}
+.btn-apv{
+  flex:1;padding:5px;text-align:center;
+  background:#001400;border:1px solid #00ff41;
+  color:#00ff41;font-size:9px;border-radius:2px;
+  font-family:'Courier New',monospace;
+}
+@keyframes fp{0%,100%{opacity:1}50%{opacity:.55}}
 
-  /* ── 임무 로그 ── */
-  .mission-log {
-    border-top:1px solid var(--border);
-    padding:5px 8px;
-    height:90px;
-    overflow-y:auto;
-    flex-shrink:0;
-  }
-  .mission-log::-webkit-scrollbar { width:3px; }
-  .mission-log::-webkit-scrollbar-thumb { background:var(--green-dim); }
-  .log-title { font-size:9px; color:var(--text-dim); margin-bottom:3px; }
-  .log-entry {
-    font-size:9px; line-height:1.6;
-    border-bottom:1px solid #0a150a;
-    padding:1px 0;
-  }
-  .log-entry .ts { color:var(--text-dim); }
-  .log-entry .msg { color:var(--text); }
-  .log-entry.warn .msg { color:var(--yellow); }
-  .log-entry.ok   .msg { color:var(--green); }
-  .log-entry.fire .msg { color:var(--red); }
+/* 로그 */
+.log-wrap{
+  border-top:1px solid #0f2a0f;
+  height:88px;overflow-y:auto;
+  padding:4px 8px;flex-shrink:0;
+}
+.log-wrap::-webkit-scrollbar{width:3px}
+.log-wrap::-webkit-scrollbar-thumb{background:#1a3a1a}
+.log-ttl{font-size:8px;color:#1a4a1a;margin-bottom:2px}
+.le{font-size:8.5px;line-height:1.7;border-bottom:1px solid #050f05;padding:1px 0}
+.le .ts{color:#1a4a1a}
+.le.ok .tx{color:#00ff41}
+.le.wn .tx{color:#ffe100}
+.le.fr .tx{color:#ff2020}
 
-  /* ── 하단 바 ── */
-  footer {
-    background:#060d06;
-    border-top:1px solid var(--border);
-    padding:4px 16px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    font-size:9px;
-    color:var(--text-dim);
-    flex-shrink:0;
-  }
-  footer .footer-items { display:flex; gap:16px; }
-  .f-item { display:flex; align-items:center; gap:4px; }
-  .f-item .val { color:var(--green); }
-  .f-item .val.red { color:var(--red); }
-
-  /* ── 돔 폭발 애니메이션 ── */
-  @keyframes dome-expand {
-    0%   { r: 0; opacity:.9; }
-    70%  { opacity:.6; }
-    100% { r: 80; opacity:0; }
-  }
-  @keyframes dome-ring {
-    0%   { stroke-dashoffset: 600; opacity:.8; }
-    100% { stroke-dashoffset: 0;   opacity:0; }
-  }
-  .scan-line {
-    position:absolute; top:0; left:0; width:100%; height:2px;
-    background: linear-gradient(transparent, var(--green), transparent);
-    animation: scan 3s linear infinite;
-    opacity:.15; pointer-events:none;
-  }
-  @keyframes scan { 0%{top:0} 100%{top:100%} }
+/* 하단 바 */
+#ftr{
+  background:rgba(0,8,0,.95);border-top:1px solid #0f2a0f;
+  padding:3px 14px;display:flex;justify-content:space-between;
+  align-items:center;font-size:8.5px;color:#1a4a1a;flex-shrink:0;
+}
+#ftr .fv{color:#00ff41}
+#ftr .fv.r{color:#ff2020}
 </style>
 </head>
 <body>
 
-<!-- ── 헤더 ── -->
-<header>
-  <div class="header-title">⚡ 우루루쾅 화력운용 시스템 v1.0 · DEMO</div>
-  <div class="header-status">
-    <div class="status-item"><div class="dot green"></div><span style="font-size:11px">URQ-01 ACTIVE</span></div>
-    <div class="status-item"><div class="dot green"></div><span style="font-size:11px">URQ-02 ACTIVE</span></div>
-    <div class="status-item"><div class="dot blue"></div><span style="font-size:11px">AI ONLINE</span></div>
-    <div class="status-item"><div class="dot red"></div><span style="font-size:11px">2 TARGETS</span></div>
+<!-- 헤더 -->
+<div id="hdr">
+  <div class="htitle">⚡ 우루루쾅 화력운용 시스템 &nbsp;·&nbsp; FSS v2.0 DEMO</div>
+  <div class="hstats">
+    <div class="hstat"><div class="led led-g"></div>URQ-01 LIVE</div>
+    <div class="hstat"><div class="led led-g"></div>URQ-02 LIVE</div>
+    <div class="hstat"><div class="led led-b"></div>AI ONLINE</div>
+    <div class="hstat"><div class="led led-r"></div><span id="h-tgt">2 TARGETS</span></div>
   </div>
-  <div style="display:flex;gap:16px;align-items:center">
-    <div class="latency">⚡ <span id="latency">46</span>ms</div>
-    <div class="time-display" id="clock"></div>
+  <div class="hright">
+    <span>⚡ <span id="h-lat" class="lat-val">46</span>ms</span>
+    <span id="h-clk" style="color:#1a4a1a"></span>
   </div>
-</header>
+</div>
 
-<!-- ── 3패널 ── -->
-<div class="panels">
+<!-- 메인 -->
+<div id="main">
 
-  <!-- 좌: 드론 영상 -->
-  <div class="panel">
-    <div class="panel-header">
-      <span>🎥 DRONE FEED</span>
-      <span id="drone-id">URQ-01 · 15fps</span>
-    </div>
-    <div id="drone-canvas-wrap">
-      <canvas id="droneCanvas"></canvas>
-      <div class="drone-hud">
-        ALT: <span id="hud-alt">124</span>m<br>
-        SPD: <span id="hud-spd">12.4</span>m/s<br>
-        HDG: <span id="hud-hdg">247</span>°
+  <!-- 좌: 드론 피드 -->
+  <div class="pnl">
+    <div class="pnl-hdr"><b>🎥 DRONE FEED</b><span id="did">URQ-01 · IR MODE</span></div>
+    <div id="dv">
+      <canvas id="dc"></canvas>
+      <!-- HUD 오버레이 -->
+      <div class="dhud">
+        <div class="dhud-top">
+          <div class="hud-block">
+            <div><span class="lbl">ALT&nbsp;</span><span class="val" id="h-alt">124</span><span class="lbl">m</span></div>
+            <div><span class="lbl">SPD&nbsp;</span><span class="val" id="h-spd">12.4</span><span class="lbl">m/s</span></div>
+            <div><span class="lbl">HDG&nbsp;</span><span class="val" id="h-hdg">247</span><span class="lbl">°</span></div>
+          </div>
+          <div class="hud-block" style="text-align:right">
+            <div><span class="lbl">LAT&nbsp;</span><span class="val">37.4521°N</span></div>
+            <div><span class="lbl">LON&nbsp;</span><span class="val">126.9744°E</span></div>
+            <div><span class="lbl">REC&nbsp;</span><span class="val red" id="rec">● REC</span></div>
+          </div>
+        </div>
+        <div class="dhud-mid"></div>
+        <div class="dhud-bot">
+          <div class="hud-block">
+            <div><span class="lbl">BATT&nbsp;</span><span class="val" id="h-bat">78</span><span class="lbl">%</span></div>
+            <div><span class="lbl">LINK&nbsp;</span><span class="val">STRONG</span></div>
+          </div>
+          <div class="hud-block" style="text-align:right">
+            <div><span class="lbl">TGT&nbsp;</span><span class="val red" id="h-tc">2 DETECTED</span></div>
+            <div><span class="lbl">MODE&nbsp;</span><span class="val yel">TRACK</span></div>
+          </div>
+        </div>
       </div>
-      <div class="drone-hud right">
-        LAT: 37.4563°N<br>
-        LON: 126.9812°E<br>
-        <span style="color:var(--red)" id="rec-blink">● REC</span>
-      </div>
-      <div class="scan-line"></div>
-    </div>
-  </div>
-
-  <!-- 중: 전술 지도 -->
-  <div class="panel">
-    <div class="panel-header">
-      <span>🗺️ TACTICAL MAP</span>
-      <span id="map-mode-label">3D CESIUM</span>
-    </div>
-    <canvas id="mapCanvas"></canvas>
-    <div class="map-controls">
-      <button class="map-btn active" onclick="setMapMode('3d')">🌐 3D</button>
-      <button class="map-btn" onclick="setMapMode('2d')">🗺️ 2D</button>
-      <button class="map-btn" onclick="setMapMode('split')">⊞ SPLIT</button>
-      <button class="map-btn" onclick="triggerStrike()" style="border-color:var(--red);color:var(--red);">💥 TEST STRIKE</button>
+      <div class="scan"></div>
     </div>
   </div>
 
-  <!-- 우: OCO 화력 주문표 -->
-  <div class="panel">
-    <div class="panel-header">
-      <span>🔴 OCO FIRE MISSION</span>
-      <span id="mission-count">2 TARGETS</span>
+  <!-- 중: 지도 -->
+  <div class="pnl">
+    <div class="pnl-hdr"><b>🗺️ TACTICAL MAP</b><span id="mml">3D VIEW</span></div>
+    <canvas id="mc"></canvas>
+    <div class="map-btns">
+      <button class="mb on"  onclick="setMode('3d',this)">🌐 3D</button>
+      <button class="mb"     onclick="setMode('2d',this)">🗺️ 2D</button>
+      <button class="mb"     onclick="setMode('sp',this)">⊞ SPLIT</button>
+      <button class="mb strike" onclick="doStrike()">💥 TEST STRIKE</button>
     </div>
-    <div class="oco-panel" id="oco-panel">
+  </div>
 
-      <!-- 타겟 카드 1 -->
-      <div class="target-card active" id="tc1">
-        <div class="tc-header">
-          <span class="tc-class">⚠ 2S19_MSTA</span>
-          <span class="tc-conf">CONF: 87%</span>
+  <!-- 우: OCO -->
+  <div class="pnl">
+    <div class="pnl-hdr"><b>🔴 OCO FIRE MISSION</b><span id="mc2">2 TARGETS</span></div>
+    <div class="oco-body">
+
+      <div class="tc hot" id="tc1">
+        <div class="tc-hdr">
+          <span class="cls-red">⚠ 2S19_MSTA</span>
+          <span class="conf">CONF&nbsp;87%&nbsp;●●●○○</span>
         </div>
-        <div class="tc-body">
-          <b>좌표:</b> 37.4521°N 126.9744°E<br>
-          <b>거리:</b> 3.2km | <b>방위:</b> 247°<br>
-          <b>속도:</b> 4.2m/s → NW<br>
-          <b>위협등급:</b> <span style="color:var(--red)">HIGH</span>
+        <div class="tc-info">
+          <b>좌표</b>&nbsp;37.4521°N&nbsp;126.9744°E<br>
+          <b>거리</b>&nbsp;3.2km&nbsp;&nbsp;<b>방위</b>&nbsp;247°&nbsp;&nbsp;<b>속도</b>&nbsp;4.2m/s<br>
+          <b>위협</b>&nbsp;<span style="color:#ff2020">HIGH ▲</span>&nbsp;&nbsp;<b>프레임</b>&nbsp;<span id="f1">0</span>
         </div>
-        <div class="weapon-rec">
-          <div class="weapon-rec-title">🎯 타격수단 권고</div>
-          <div class="weapon-item"><span class="wname">K-9 자주포</span><span>우선도 1</span></div>
-          <div class="weapon-item"><span class="wname">MLRS</span><span>우선도 2</span></div>
+        <div class="wrec">
+          <div class="wrec-ttl">🎯 타격수단 권고</div>
+          <div class="wi"><span class="wn">K-9 자주포</span><span>우선 1</span></div>
+          <div class="wi"><span class="wn">MLRS 다연장</span><span>우선 2</span></div>
         </div>
-        <div class="tc-actions" id="tc1-actions">
-          <button class="btn-fire" id="btn-tc1" onclick="fireBtnClick(1)">🎯 교전 승인</button>
+        <div class="tc-act" id="a1">
+          <button class="btn-f" id="b1" onclick="fire(1)">🎯 교전 승인</button>
         </div>
       </div>
 
-      <!-- 타겟 카드 2 -->
-      <div class="target-card" id="tc2">
-        <div class="tc-header">
-          <span class="tc-class">⚠ T72_series</span>
-          <span class="tc-conf">CONF: 74%</span>
+      <div class="tc" id="tc2">
+        <div class="tc-hdr">
+          <span class="cls-ora">⚠ T72_series</span>
+          <span class="conf">CONF&nbsp;74%&nbsp;●●○○○</span>
         </div>
-        <div class="tc-body">
-          <b>좌표:</b> 37.4598°N 126.9801°E<br>
-          <b>거리:</b> 4.1km | <b>방위:</b> 312°<br>
-          <b>속도:</b> 2.1m/s → N<br>
-          <b>위협등급:</b> <span style="color:var(--orange)">MEDIUM</span>
+        <div class="tc-info">
+          <b>좌표</b>&nbsp;37.4598°N&nbsp;126.9801°E<br>
+          <b>거리</b>&nbsp;4.1km&nbsp;&nbsp;<b>방위</b>&nbsp;312°&nbsp;&nbsp;<b>속도</b>&nbsp;2.1m/s<br>
+          <b>위협</b>&nbsp;<span style="color:#ff6a00">MED ▲</span>&nbsp;&nbsp;<b>프레임</b>&nbsp;<span id="f2">0</span>
         </div>
-        <div class="weapon-rec">
-          <div class="weapon-rec-title">🎯 타격수단 권고</div>
-          <div class="weapon-item"><span class="wname">AH-64 아파치</span><span>우선도 1</span></div>
-          <div class="weapon-item"><span class="wname">K-9 자주포</span><span>우선도 2</span></div>
+        <div class="wrec">
+          <div class="wrec-ttl">🎯 타격수단 권고</div>
+          <div class="wi"><span class="wn">AH-64 아파치</span><span>우선 1</span></div>
+          <div class="wi"><span class="wn">K-9 자주포</span><span>우선 2</span></div>
         </div>
-        <div class="tc-actions" id="tc2-actions">
-          <button class="btn-fire" id="btn-tc2" onclick="fireBtnClick(2)">🎯 교전 승인</button>
+        <div class="tc-act" id="a2">
+          <button class="btn-f" id="b2" onclick="fire(2)">🎯 교전 승인</button>
         </div>
       </div>
 
     </div>
-
-    <!-- 임무 로그 -->
-    <div class="mission-log">
-      <div class="log-title">📋 MISSION LOG</div>
-      <div id="log-container"></div>
+    <div class="log-wrap">
+      <div class="log-ttl">📋 MISSION LOG</div>
+      <div id="log"></div>
     </div>
   </div>
 
 </div>
 
 <!-- 하단 바 -->
-<footer>
-  <div class="footer-items">
-    <div class="f-item">SYSTEM: <span class="val">ONLINE</span></div>
-    <div class="f-item">DRONES: <span class="val">2/8</span></div>
-    <div class="f-item">LATENCY: <span class="val" id="f-latency">46ms</span></div>
-    <div class="f-item">TARGETS: <span class="val red" id="f-targets">2</span></div>
-    <div class="f-item">MISSIONS: <span class="val" id="f-missions">0</span></div>
+<div id="ftr">
+  <div style="display:flex;gap:16px">
+    <span>SYS: <span class="fv">ONLINE</span></span>
+    <span>DRONES: <span class="fv">2/8</span></span>
+    <span>LATENCY: <span class="fv" id="fl">46ms</span></span>
+    <span>TARGETS: <span class="fv r" id="ft">2</span></span>
+    <span>MISSIONS: <span class="fv" id="fm">0</span></span>
   </div>
-  <div>⚡ 우루루쾅 FSS · DEMO / EDUCATIONAL USE ONLY</div>
-</footer>
+  <span>⚡ 우루루쾅 FSS · DEMO / EDUCATIONAL USE ONLY</span>
+</div>
 
 <script>
-// ════════════════════════════════════
+// =====================================================
 // 전역 상태
-// ════════════════════════════════════
-let mapMode = '3d';
-let frameIdx = 0;
-let missions = 0;
-let targets = 2;
-let domes = [];       // 폭발 돔 목록
-let dronePos = [{x:.45,y:.55},{x:.62,y:.38}];
-let bboxes = [
-  {x:.28,y:.42,w:.22,h:.18,cls:'2S19_MSTA',conf:.87,color:'#ff2020'},
-  {x:.58,y:.28,w:.18,h:.14,cls:'T72_series',conf:.74,color:'#ff6a00'},
+// =====================================================
+let mapMode='3d', mapT=0, fIdx=0;
+let domes=[], missions=0, targets=2;
+let s1=0, s2=0; // fire step
+const drones=[{x:.44,y:.54,vx:.0004,vy:.0002},{x:.60,y:.38,vx:-.0003,vy:.0003}];
+const tgts=[
+  {x:.47,y:.52,label:'2S19',color:'#ff2020'},
+  {x:.54,y:.41,label:'T-72',color:'#ff6a00'}
 ];
-let tc1State = 'idle'; // idle → confirm → approved
-let tc2State = 'idle';
-let flashTargets = [];
 
-// ════════════════════════════════════
+// BBox 상태 (IR 영상 위 시뮬)
+const boxes=[
+  {x:.18,y:.38,w:.26,h:.20,cls:'2S19_MSTA',conf:.87,c:'#ff2020',mx:.0007,my:.0004},
+  {x:.55,y:.24,w:.22,h:.16,cls:'T72_series',conf:.74,c:'#ff6a00',mx:-.0005,my:.0005},
+];
+
+// =====================================================
 // 시계
-// ════════════════════════════════════
-function updateClock() {
-  const now = new Date();
-  document.getElementById('clock').textContent =
-    now.toLocaleTimeString('ko-KR',{hour12:false}) + ' KST';
+// =====================================================
+function tick(){
+  const n=new Date();
+  document.getElementById('h-clk').textContent=
+    n.toLocaleTimeString('ko-KR',{hour12:false})+' KST';
 }
-setInterval(updateClock, 1000);
-updateClock();
+setInterval(tick,1000); tick();
 
-// 레이턴시 지글거림
+// 레이턴시
 setInterval(()=>{
-  const v = 42 + Math.floor(Math.random()*12);
-  document.getElementById('latency').textContent = v;
-  document.getElementById('f-latency').textContent = v+'ms';
-},800);
+  const v=42+Math.floor(Math.random()*14);
+  document.getElementById('h-lat').textContent=v;
+  document.getElementById('fl').textContent=v+'ms';
+},900);
 
-// HUD 지글거림
+// HUD
 setInterval(()=>{
-  document.getElementById('hud-alt').textContent = (122+Math.random()*4).toFixed(0);
-  document.getElementById('hud-spd').textContent = (11.5+Math.random()*2).toFixed(1);
-  document.getElementById('hud-hdg').textContent = (244+Math.random()*6).toFixed(0);
-},600);
-
-// REC 깜빡임
-let recOn=true;
-setInterval(()=>{
-  recOn=!recOn;
-  document.getElementById('rec-blink').style.opacity=recOn?1:0;
+  document.getElementById('h-alt').textContent=(121+Math.random()*6).toFixed(0);
+  document.getElementById('h-spd').textContent=(11+Math.random()*3).toFixed(1);
+  document.getElementById('h-hdg').textContent=(243+Math.random()*8).toFixed(0);
+  document.getElementById('h-bat').textContent=(77-fIdx*.0003).toFixed(0);
 },700);
 
-// ════════════════════════════════════
-// 드론 캔버스
-// ════════════════════════════════════
-const dCanvas = document.getElementById('droneCanvas');
-const dCtx    = dCanvas.getContext('2d');
+// REC 깜빡임
+let rv=true;
+setInterval(()=>{rv=!rv; document.getElementById('rec').style.opacity=rv?1:0;},600);
 
-function resizeDroneCanvas() {
-  const wrap = document.getElementById('drone-canvas-wrap');
-  dCanvas.width  = wrap.clientWidth;
-  dCanvas.height = wrap.clientHeight;
+// 프레임 카운더
+setInterval(()=>{
+  document.getElementById('f1').textContent=fIdx;
+  document.getElementById('f2').textContent=Math.floor(fIdx*.7);
+},200);
+
+// =====================================================
+// 드론 캔버스 — IR/주화간 영상 시뮬레이션
+// =====================================================
+const DC=document.getElementById('dc');
+const DX=DC.getContext('2d');
+
+function resizeDC(){
+  const p=DC.parentElement;
+  DC.width=p.clientWidth; DC.height=p.clientHeight;
 }
 
-function drawDroneFrame() {
-  const W = dCanvas.width, H = dCanvas.height;
-  const t = frameIdx * 0.04;
+function drawDrone(){
+  const W=DC.width,H=DC.height,t=fIdx*.035;
+  fIdx++;
 
-  // 배경 지형
-  dCtx.fillStyle = '#061206';
-  dCtx.fillRect(0,0,W,H);
+  // IR 눈싙 효과: 어두운 지형 + 열화상 차량
+  // 배경: 울릴퍼리는 지형 녹색-검정
+  DX.fillStyle='#050e05';
+  DX.fillRect(0,0,W,H);
 
-  // 지형 노이즈 패치
-  for(let i=0;i<40;i++){
-    const nx = (Math.sin(i*37.4+t*.1)*0.5+0.5)*W;
-    const ny = (Math.cos(i*19.7+t*.08)*0.5+0.5)*H;
-    const r  = 8+Math.sin(i*5.3)*6;
-    const alpha = 0.04+Math.sin(i+t*.05)*0.02;
-    dCtx.beginPath();
-    dCtx.arc(nx,ny,r,0,Math.PI*2);
-    dCtx.fillStyle=`rgba(20,50,15,${alpha})`;
-    dCtx.fill();
+  // ─ 지형 레이어 ─
+  // 어두운 녹색 얼룩얼룩한 패치들
+  for(let i=0;i<55;i++){
+    const nx=(Math.sin(i*41.3+t*.04)*.5+.5)*W;
+    const ny=(Math.cos(i*27.1+t*.03)*.5+.5)*H;
+    const nr=14+Math.sin(i*7.3)*9;
+    const nb=.025+Math.sin(i*3.1+t*.02)*.012;
+    DX.beginPath();
+    DX.arc(nx,ny,nr,0,Math.PI*2);
+    DX.fillStyle=`rgba(10,30,8,${nb})`;
+    DX.fill();
   }
 
-  // 도로
-  dCtx.strokeStyle='rgba(80,100,60,0.3)';
-  dCtx.lineWidth=3;
-  dCtx.beginPath(); dCtx.moveTo(0,H*.5); dCtx.lineTo(W,H*.48); dCtx.stroke();
-  dCtx.beginPath(); dCtx.moveTo(W*.3,0); dCtx.lineTo(W*.35,H); dCtx.stroke();
+  // ─ 도로 / 트랙 ─
+  DX.save();
+  DX.strokeStyle='rgba(30,55,25,.35)';
+  DX.lineWidth=4;
+  DX.beginPath();
+  DX.moveTo(0,H*.62); DX.bezierCurveTo(W*.3,H*.6,W*.7,H*.58,W,H*.6);
+  DX.stroke();
+  DX.strokeStyle='rgba(25,45,20,.3)';
+  DX.lineWidth=2;
+  DX.beginPath();
+  DX.moveTo(W*.25,0); DX.bezierCurveTo(W*.28,H*.3,W*.31,H*.7,W*.3,H);
+  DX.stroke();
+  DX.restore();
 
-  // BBox 차량들
-  bboxes.forEach((bb,i)=>{
-    // 차량 이동 시뮬
-    const dx = Math.sin(t+i*1.3)*0.006;
-    const dy = Math.cos(t*0.7+i*2.1)*0.004;
-    bb.x = Math.max(0.05, Math.min(0.75, bb.x+dx));
-    bb.y = Math.max(0.05, Math.min(0.78, bb.y+dy));
+  // ─ 어두운 곳것 (IR 본체 시뮬) ─
+  // 어두운 녹색 뒤 푸른 가소화
+  const vgr=DX.createLinearGradient(0,0,0,H);
+  vgr.addColorStop(0,'rgba(0,25,0,.18)');
+  vgr.addColorStop(.5,'transparent');
+  vgr.addColorStop(1,'rgba(0,15,0,.15)');
+  DX.fillStyle=vgr;
+  DX.fillRect(0,0,W,H);
+
+  // ─ 차량 (IR 열화상) ─
+  boxes.forEach((bb,i)=>{
+    // 이동
+    bb.x+=bb.mx*(1+Math.sin(t+i)*.3);
+    bb.y+=bb.my*(1+Math.cos(t*.8+i)*.3);
+    if(bb.x<.02||bb.x>.72) bb.mx*=-1;
+    if(bb.y<.02||bb.y>.78) bb.my*=-1;
 
     const px=bb.x*W, py=bb.y*H, pw=bb.w*W, ph=bb.h*H;
+    const cx=px+pw/2, cy=py+ph/2;
 
-    // 차체
-    dCtx.fillStyle = i===0 ? '#2a4018' : '#1e3212';
-    dCtx.fillRect(px,py,pw,ph);
+    // 환료: IR 열등응 (warm blob)
+    const hgr=DX.createRadialGradient(cx,cy,2,cx,cy,pw*.7);
+    hgr.addColorStop(0,i===0?'rgba(220,255,200,.55)':'rgba(200,230,180,.45)');
+    hgr.addColorStop(.4,i===0?'rgba(80,160,60,.25)':'rgba(60,130,40,.2)');
+    hgr.addColorStop(1,'transparent');
+    DX.beginPath();
+    DX.ellipse(cx,cy+ph*.2,pw*.5,ph*.4,0,0,Math.PI*2);
+    DX.fillStyle=hgr;
+    DX.fill();
+
+    // 차체 도형 (IR 는맳한 명암대비)
+    DX.fillStyle=i===0?'rgba(90,160,70,.6)':'rgba(70,130,50,.5)';
+    // 본체
+    DX.fillRect(px,py+ph*.25,pw,ph*.5);
     // 포신
-    dCtx.strokeStyle=i===0?'#4a6028':'#3a5020';
-    dCtx.lineWidth=4;
-    dCtx.beginPath();
-    dCtx.moveTo(px+pw*.5,py+ph*.5);
-    dCtx.lineTo(px+pw*1.2,py+ph*.3);
-    dCtx.stroke();
+    DX.fillStyle=i===0?'rgba(110,180,85,.7)':'rgba(85,145,60,.6)';
+    DX.save();
+    DX.translate(cx,cy);
+    DX.rotate(i===0?-.15:.1);
+    DX.fillRect(0,-ph*.06,pw*.55,ph*.12);
+    DX.restore();
+    // 탁레 (IR 효과)
+    const wgr=DX.createRadialGradient(cx,cy+ph*.5,0,cx,cy+ph*.5,pw*.4);
+    wgr.addColorStop(0,'rgba(150,220,120,.3)');
+    wgr.addColorStop(1,'transparent');
+    DX.beginPath();
+    DX.ellipse(cx,cy+ph*.55,pw*.35,ph*.12,0,0,Math.PI*2);
+    DX.fillStyle=wgr;
+    DX.fill();
 
-    // BBox 테두리
-    const alpha = 0.7 + Math.sin(t*3+i)*0.3;
-    dCtx.strokeStyle = bb.color.replace(')',`,${alpha})`).replace('rgb(','rgba(');
-    dCtx.strokeStyle = bb.color;
-    dCtx.globalAlpha = alpha;
-    dCtx.lineWidth = 2;
-    dCtx.strokeRect(px,py,pw,ph);
-    dCtx.globalAlpha = 1;
-
+    // ─ BBox 테두리 ─
+    const bp=.55+Math.sin(t*3.5+i)*0.45; // 깜빡임
+    DX.save();
+    DX.globalAlpha=bp;
+    DX.strokeStyle=bb.c;
+    DX.lineWidth=1.5;
+    DX.strokeRect(px,py,pw,ph);
     // 모서리 마커
-    const cs=8;
-    dCtx.strokeStyle=bb.color;
-    dCtx.lineWidth=2;
-    [[px,py],[px+pw,py],[px,py+ph],[px+pw,py+ph]].forEach(([cx,cy])=>{
-      dCtx.beginPath();
-      dCtx.moveTo(cx+(cx>px+pw/2?-cs:cs),cy); dCtx.lineTo(cx,cy); dCtx.lineTo(cx,cy+(cy>py+ph/2?-cs:cs));
-      dCtx.stroke();
+    const cs=7;
+    [[px,py],[px+pw,py],[px,py+ph],[px+pw,py+ph]].forEach(([ox,oy])=>{
+      const sx=ox>cx?-cs:cs, sy=oy>cy?-cs:cs;
+      DX.beginPath();
+      DX.moveTo(ox+sx,oy); DX.lineTo(ox,oy); DX.lineTo(ox,oy+sy);
+      DX.stroke();
     });
+    DX.globalAlpha=1;
+    // 레이블 배경
+    DX.fillStyle=bb.c+'cc';
+    DX.fillRect(px,py-14,pw*.75,13);
+    DX.fillStyle='#000';
+    DX.font='bold 8px Courier New';
+    DX.fillText(bb.cls+' '+Math.round(bb.conf*100)+'%',px+2,py-3);
+    DX.restore();
 
-    // 레이블
-    dCtx.fillStyle=bb.color;
-    dCtx.font='bold 9px Courier New';
-    dCtx.fillText(`${bb.cls} ${(bb.conf*100).toFixed(0)}%`, px, py-3);
+    // 레이더 표적 잠금 셀
+    if(i===0){
+      DX.strokeStyle='rgba(255,32,32,.7)';
+      DX.lineWidth=1;
+      DX.setLineDash([3,3]);
+      DX.beginPath();
+      DX.arc(cx,cy,pw*.6,0,Math.PI*2);
+      DX.stroke();
+      DX.setLineDash([]);
+    }
   });
 
-  // 스캔라인 오버레이
-  const scanY = (t*60)%H;
-  const grad = dCtx.createLinearGradient(0,scanY-10,0,scanY+10);
-  grad.addColorStop(0,'transparent');
-  grad.addColorStop(0.5,'rgba(0,255,65,0.06)');
-  grad.addColorStop(1,'transparent');
-  dCtx.fillStyle=grad;
-  dCtx.fillRect(0,scanY-10,W,20);
+  // ─ 중앙 크로스헤어 ─
+  const cx2=W/2,cy2=H/2;
+  DX.strokeStyle='rgba(0,255,65,.6)';
+  DX.lineWidth=1;
+  DX.beginPath(); DX.moveTo(cx2-12,cy2); DX.lineTo(cx2+12,cy2); DX.stroke();
+  DX.beginPath(); DX.moveTo(cx2,cy2-12); DX.lineTo(cx2,cy2+12); DX.stroke();
+  DX.beginPath(); DX.arc(cx2,cy2,18,0,Math.PI*2); DX.stroke();
+  DX.beginPath(); DX.arc(cx2,cy2,28,Math.PI*.1,Math.PI*.4); DX.stroke();
+  DX.beginPath(); DX.arc(cx2,cy2,28,Math.PI*1.1,Math.PI*1.4); DX.stroke();
 
-  // 크로스헤어 (화면 중앙)
-  const cx=W/2, cy=H/2;
-  dCtx.strokeStyle='rgba(0,255,65,0.5)';
-  dCtx.lineWidth=1;
-  dCtx.beginPath(); dCtx.moveTo(cx-15,cy); dCtx.lineTo(cx+15,cy); dCtx.stroke();
-  dCtx.beginPath(); dCtx.moveTo(cx,cy-15); dCtx.lineTo(cx,cy+15); dCtx.stroke();
-  dCtx.beginPath(); dCtx.arc(cx,cy,20,0,Math.PI*2); dCtx.stroke();
+  // ─ 수평선 (artificial horizon) ─
+  const roll=Math.sin(t*.4)*.06;
+  DX.save();
+  DX.translate(cx2,cy2);
+  DX.rotate(roll);
+  DX.strokeStyle='rgba(0,255,65,.35)';
+  DX.lineWidth=1;
+  DX.setLineDash([4,8]);
+  DX.beginPath(); DX.moveTo(-40,0); DX.lineTo(-18,0); DX.stroke();
+  DX.beginPath(); DX.moveTo(18,0);  DX.lineTo(40,0);  DX.stroke();
+  DX.setLineDash([]);
+  DX.restore();
 
-  frameIdx++;
-  requestAnimationFrame(drawDroneFrame);
+  // ─ 오염 / 비네트 ─
+  const vign=DX.createRadialGradient(W/2,H/2,H*.25,W/2,H/2,H*.7);
+  vign.addColorStop(0,'transparent');
+  vign.addColorStop(1,'rgba(0,0,0,.65)');
+  DX.fillStyle=vign;
+  DX.fillRect(0,0,W,H);
+
+  // ─ 스토리지 개수기 + 스캐선 ─
+  const scanY=((t*35)%H);
+  DX.fillStyle='rgba(0,255,65,.04)';
+  DX.fillRect(0,scanY,W,2);
+
+  // ─ TV static noise ─
+  if(Math.random()>.96){
+    DX.fillStyle='rgba(0,255,65,.06)';
+    DX.fillRect(0,Math.random()*H,W,1+Math.random()*2);
+  }
+
+  requestAnimationFrame(drawDrone);
 }
 
-// ════════════════════════════════════
-// 전술 지도 캔버스
-// ════════════════════════════════════
-const mCanvas = document.getElementById('mapCanvas');
-const mCtx    = mCanvas.getContext('2d');
+// =====================================================
+// 지도 캔버스
+// =====================================================
+const MC=document.getElementById('mc');
+const MX=MC.getContext('2d');
 
-function resizeMapCanvas() {
-  const panel = mCanvas.parentElement;
-  mCanvas.width  = panel.clientWidth;
-  mCanvas.height = panel.clientHeight - 70;
+function resizeMC(){
+  const p=MC.parentElement;
+  MC.width=p.clientWidth;
+  MC.height=p.clientHeight-52;
 }
 
-let mapT = 0;
-function drawMap() {
-  const W = mCanvas.width, H = mCanvas.height;
-  mapT += 0.016;
+function drawMap(){
+  const W=MC.width,H=MC.height;
+  mapT+=.016;
+  MX.fillStyle='#020802';
+  MX.fillRect(0,0,W,H);
 
-  mCtx.fillStyle = '#040e04';
-  mCtx.fillRect(0,0,W,H);
-
-  if(mapMode === '3d') drawMap3D(W,H);
-  else if(mapMode === '2d') drawMap2D(W,H);
-  else { drawMap3D(W/2,H,0,0); drawMap2D(W/2,H,W/2,0); }
+  if(mapMode==='3d') _m3d(0,0,W,H);
+  else if(mapMode==='2d') _m2d(0,0,W,H);
+  else{ _m3d(0,0,W/2,H); _m2d(W/2,0,W/2,H); divLine(W/2,H); }
 
   requestAnimationFrame(drawMap);
 }
 
-function drawMap3D(W,H,ox=0,oy=0) {
-  // 지구 원
-  mCtx.save();
-  mCtx.translate(ox,oy);
+function _m3d(ox,oy,W,H){
+  MX.save(); MX.translate(ox,oy);
 
-  // 배경
-  const bgGrad = mCtx.createRadialGradient(W/2,H/2,10,W/2,H/2,Math.min(W,H)*.48);
-  bgGrad.addColorStop(0,'#0a1e0a');
-  bgGrad.addColorStop(1,'#040a04');
-  mCtx.beginPath();
-  mCtx.arc(W/2,H/2,Math.min(W,H)*.46,0,Math.PI*2);
-  mCtx.fillStyle=bgGrad;
-  mCtx.fill();
-  mCtx.strokeStyle='#1a3a1a';
-  mCtx.lineWidth=1;
-  mCtx.stroke();
+  // 위성 지도 모사 (Mapbox 스타일)
+  const bg=MX.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#0e1f0e');
+  bg.addColorStop(.5,'#0b180b');
+  bg.addColorStop(1,'#081008');
+  MX.fillStyle=bg; MX.fillRect(0,0,W,H);
 
-  // 위도선
-  for(let lat=-60;lat<=60;lat+=20){
-    const y = H/2 + (lat/90)*(H*.42);
-    const half = Math.sqrt(Math.max(0,(H*.46)**2 - (y-H/2)**2));
-    mCtx.beginPath();
-    mCtx.ellipse(W/2,y,half,half*.2,0,0,Math.PI*2);
-    mCtx.strokeStyle='rgba(0,80,20,0.3)';
-    mCtx.lineWidth=.5;
-    mCtx.stroke();
-  }
-  // 경도선
-  for(let i=0;i<8;i++){
-    const angle = (i/8)*Math.PI*2 + mapT*.1;
-    mCtx.beginPath();
-    mCtx.ellipse(W/2,H/2,Math.sin(angle)*W*.46,H*.46,0,0,Math.PI*2);
-    mCtx.strokeStyle='rgba(0,80,20,0.2)';
-    mCtx.lineWidth=.5;
-    mCtx.stroke();
-  }
-
-  // 한반도 윤곽선 (간략)
-  mCtx.strokeStyle='rgba(0,200,80,0.6)';
-  mCtx.lineWidth=1.5;
-  mCtx.beginPath();
-  const kp = [
-    [.48,.28],[.52,.30],[.55,.36],[.53,.44],[.50,.52],
-    [.48,.58],[.47,.62],[.49,.66],[.51,.64],[.52,.58],
-    [.54,.52],[.57,.46],[.56,.40],[.54,.34],[.52,.30]
+  // 리얼한 트레일 / 도로
+  MX.strokeStyle='rgba(30,60,25,.5)'; MX.lineWidth=2;
+  const roads=[
+    [[.1,.3],[.9,.28]],[[.2,.1],[.22,.9]],
+    [[.05,.6],[.95,.62]],[[.5,.05],[.52,.95]],
+    [[.3,.2],[.7,.8]],[[.1,.7],[.6,.2]]
   ];
-  kp.forEach(([x,y],i)=>{
-    i===0?mCtx.moveTo(x*W,y*H):mCtx.lineTo(x*W,y*H);
+  roads.forEach(r=>{
+    MX.beginPath();
+    r.forEach(([x,y],i)=>i===0?MX.moveTo(x*W,y*H):MX.lineTo(x*W,y*H));
+    MX.stroke();
   });
-  mCtx.stroke();
 
-  // 드론 아이콘
-  dronePos.forEach((dp,i)=>{
-    dp.x += Math.sin(mapT*1.1+i*2)*0.001;
-    dp.y += Math.cos(mapT*.9+i*1.5)*0.001;
-    const px=dp.x*W, py=dp.y*H;
-    // 경로
-    mCtx.strokeStyle=`rgba(0,200,255,${0.2+Math.sin(mapT+i)*.1})`;
-    mCtx.lineWidth=1;
-    mCtx.setLineDash([3,5]);
-    mCtx.beginPath();
-    for(let j=0;j<10;j++){
-      const bx=px - Math.sin(mapT*1.1+i*2+j*.1)*j*W*.003;
-      const by=py - Math.cos(mapT*.9+i*1.5+j*.1)*j*H*.003;
-      j===0?mCtx.moveTo(bx,by):mCtx.lineTo(bx,by);
+  // 리얼 한반도 윤곽 - 더 정밀하게
+  MX.strokeStyle='rgba(0,200,80,.65)'; MX.lineWidth=2;
+  const kp=[
+    .44,.22, .48,.24, .52,.26, .56,.30, .58,.36,
+    .57,.40, .55,.46, .53,.50, .51,.56, .49,.62,
+    .48,.66, .49,.70, .51,.68, .53,.64, .55,.60,
+    .57,.54, .58,.48, .57,.42, .56,.36, .58,.30,
+    .56,.26, .52,.24, .48,.22
+  ];
+  MX.beginPath();
+  for(let i=0;i<kp.length;i+=2)
+    i===0?MX.moveTo(kp[i]*W,kp[i+1]*H):MX.lineTo(kp[i]*W,kp[i+1]*H);
+  MX.closePath(); MX.stroke();
+  // 지역 채우기
+  MX.fillStyle='rgba(0,100,30,.08)';
+  MX.fill();
+
+  // 비무 / 대기 효과
+  const fog=MX.createRadialGradient(W*.5,H*.5,H*.1,W*.5,H*.5,H*.65);
+  fog.addColorStop(0,'transparent');
+  fog.addColorStop(1,'rgba(0,15,5,.3)');
+  MX.fillStyle=fog; MX.fillRect(0,0,W,H);
+
+  // 그리드 (10x10)
+  MX.strokeStyle='rgba(0,50,15,.15)'; MX.lineWidth=.4;
+  for(let x=0;x<=W;x+=W/10){
+    MX.beginPath(); MX.moveTo(x,0); MX.lineTo(x,H); MX.stroke();
+  }
+  for(let y=0;y<=H;y+=H/8){
+    MX.beginPath(); MX.moveTo(0,y); MX.lineTo(W,y); MX.stroke();
+  }
+
+  // 드론 레이더 환 스집
+  drones.forEach((d,i)=>{
+    d.x+=d.vx*(1+Math.sin(mapT+i)*.3);
+    d.y+=d.vy*(1+Math.cos(mapT*.8+i)*.2);
+    if(d.x<.1||d.x>.9) d.vx*=-1;
+    if(d.y<.1||d.y>.9) d.vy*=-1;
+    const px=d.x*W, py=d.y*H;
+
+    // 스캔 환
+    const scanR=W*.12+Math.sin(mapT*2+i)*W*.02;
+    const sg=MX.createRadialGradient(px,py,0,px,py,scanR);
+    sg.addColorStop(0,'rgba(0,200,80,.06)');
+    sg.addColorStop(.7,'rgba(0,200,80,.02)');
+    sg.addColorStop(1,'transparent');
+    MX.beginPath(); MX.arc(px,py,scanR,0,Math.PI*2);
+    MX.fillStyle=sg; MX.fill();
+    MX.strokeStyle='rgba(0,200,80,.15)';
+    MX.lineWidth=1;
+    MX.beginPath(); MX.arc(px,py,scanR,0,Math.PI*2); MX.stroke();
+
+    // 항적
+    const trail=12;
+    for(let j=trail;j>0;j--){
+      const tx=px-d.vx*j*W*8;
+      const ty=py-d.vy*j*H*8;
+      MX.beginPath(); MX.arc(tx,ty,1.5,0,Math.PI*2);
+      MX.fillStyle=`rgba(0,200,255,${(trail-j)/trail*.5})`;
+      MX.fill();
     }
-    mCtx.stroke();
-    mCtx.setLineDash([]);
 
-    // 드론 심벌
-    mCtx.fillStyle='#00cfff';
-    mCtx.font='bold 12px Courier New';
-    mCtx.fillText('✈',px-6,py+4);
-    mCtx.fillStyle='rgba(0,200,255,0.6)';
-    mCtx.font='8px Courier New';
-    mCtx.fillText(`URQ-0${i+1}`,px-10,py-6);
+    // 드론 심볼
+    MX.font='13px serif';
+    MX.fillText('✈️',px-6,py+4);
+    MX.fillStyle='rgba(0,200,255,.9)';
+    MX.font='bold 7px Courier New';
+    MX.fillText('URQ-0'+(i+1),px-10,py-7);
+    // 레이턴시
+    MX.fillStyle='rgba(0,200,255,.5)';
+    MX.font='6px Courier New';
+    MX.fillText((42+Math.floor(Math.random()*14))+'ms',px-8,py+14);
   });
 
-  // 표적 마커
-  const tgts = [{x:.47,y:.52},{x:.53,y:.42}];
+  // 표적
   tgts.forEach((tg,i)=>{
     const px=tg.x*W, py=tg.y*H;
-    const blink = Math.sin(mapT*4+i)*0.5+0.5;
-    mCtx.strokeStyle=`rgba(255,32,32,${0.5+blink*.5})`;
-    mCtx.lineWidth=1.5;
-    mCtx.beginPath();
-    mCtx.arc(px,py,6+blink*2,0,Math.PI*2);
-    mCtx.stroke();
-    mCtx.fillStyle=`rgba(255,32,32,${0.8+blink*.2})`;
-    mCtx.beginPath();
-    mCtx.arc(px,py,3,0,Math.PI*2);
-    mCtx.fill();
-    mCtx.fillStyle='#ff2020';
-    mCtx.font='8px Courier New';
-    mCtx.fillText(i===0?'2S19':'T-72',px+8,py+3);
+    const b=Math.sin(mapT*4+i)*.5+.5;
+
+    // 포포선
+    MX.strokeStyle=`rgba(255,32,32,${.2+b*.2})`;
+    MX.lineWidth=.8;
+    for(let r=1;r<=3;r++){
+      MX.beginPath(); MX.arc(px,py,r*10,0,Math.PI*2);
+      MX.stroke();
+    }
+    // 마커
+    MX.strokeStyle=tg.color;
+    MX.lineWidth=1.5;
+    MX.beginPath();
+    MX.moveTo(px-7,py-7); MX.lineTo(px+7,py-7);
+    MX.lineTo(px+7,py+7); MX.lineTo(px-7,py+7); MX.closePath();
+    MX.stroke();
+    MX.fillStyle=tg.color+'55';
+    MX.fill();
+    MX.fillStyle=tg.color;
+    MX.font='7px Courier New';
+    MX.fillText(tg.label,px+9,py+3);
+    // 좌표
+    MX.fillStyle='rgba(255,80,80,.6)';
+    MX.font='6px Courier New';
+    const coords=['37.4521N 126.9744E','37.4598N 126.9801E'];
+    MX.fillText(coords[i],px-20,py+17);
   });
 
   // 폭발 돔
-  domes = domes.filter(d=>d.life>0);
+  domes=domes.filter(d=>d.life>0);
   domes.forEach(d=>{
     d.life--;
-    const p = 1 - d.life/120;
-    const r = p*Math.min(W,H)*.18;
-    // 충격파 원
-    [.6,.35,.15].forEach((alpha,j)=>{
-      const ri = r*(1-j*.2);
-      mCtx.beginPath();
-      mCtx.arc(d.x*W,d.y*H,ri,0,Math.PI*2);
-      const col = j===0?`rgba(255,100,0,${alpha*(1-p)})`:
-                  j===1?`rgba(255,200,0,${alpha*(1-p)})`:
-                       `rgba(255,255,200,${alpha*(1-p)})`;
-      mCtx.strokeStyle=col;
-      mCtx.lineWidth=2-j*.5;
-      mCtx.stroke();
+    const p=1-d.life/140;
+    const r=p*Math.min(W,H)*.16;
+    // 충격파
+    [.8,.5,.25].forEach((a,j)=>{
+      MX.beginPath();
+      MX.arc(d.x*W,d.y*H,r*(1-j*.15),0,Math.PI*2);
+      const cols=['rgba(255,80,0,','rgba(255,180,30,','rgba(255,240,150,'];
+      MX.strokeStyle=cols[j]+(a*(1-p*.8))+')';
+      MX.lineWidth=2-j*.5;
+      MX.stroke();
     });
-    // 피해 돔 채우기
-    if(p<0.5){
-      const grad2=mCtx.createRadialGradient(d.x*W,d.y*H,0,d.x*W,d.y*H,r);
-      grad2.addColorStop(0,`rgba(255,200,50,${.3*(1-p*2)})`);
-      grad2.addColorStop(1,'transparent');
-      mCtx.beginPath();
-      mCtx.arc(d.x*W,d.y*H,r,0,Math.PI*2);
-      mCtx.fillStyle=grad2;
-      mCtx.fill();
+    // 포화 노란 발광
+    if(p<.4){
+      const eg=MX.createRadialGradient(d.x*W,d.y*H,0,d.x*W,d.y*H,r);
+      eg.addColorStop(0,`rgba(255,220,80,${.6*(1-p*2.5)})`);
+      eg.addColorStop(1,'transparent');
+      MX.beginPath(); MX.arc(d.x*W,d.y*H,r,0,Math.PI*2);
+      MX.fillStyle=eg; MX.fill();
     }
-    // 클래스 라벨
-    if(d.life>60){
-      mCtx.fillStyle='rgba(255,100,0,0.9)';
-      mCtx.font='bold 9px Courier New';
-      mCtx.fillText('💥 DESTROYED',d.x*W-30,d.y*H-r-5);
+    if(d.life>80){
+      MX.fillStyle='rgba(255,100,20,.9)';
+      MX.font='bold 8px Courier New';
+      MX.fillText('💥 DESTROYED',d.x*W-28,d.y*H-r-4);
+    }
+    // 잰더 회색 연기
+    if(p>.3&&p<.8){
+      const sg2=MX.createRadialGradient(d.x*W,d.y*H-r*.4,0,d.x*W,d.y*H-r*.4,r*.5);
+      sg2.addColorStop(0,`rgba(60,60,60,${(p-.3)*.4})`);
+      sg2.addColorStop(1,'transparent');
+      MX.beginPath(); MX.arc(d.x*W,d.y*H-r*.4,r*.5,0,Math.PI*2);
+      MX.fillStyle=sg2; MX.fill();
     }
   });
 
-  // SPLIT 구분선
-  if(mapMode==='split'){
-    mCtx.strokeStyle='var(--green-dim)';
-    mCtx.lineWidth=1;
-    mCtx.beginPath();
-    mCtx.moveTo(W,0); mCtx.lineTo(W,H);
-    mCtx.stroke();
-    mCtx.fillStyle='rgba(0,200,50,0.8)';
-    mCtx.font='8px Courier New';
-    mCtx.fillText('3D',W-20,12);
-  }
-
-  mCtx.restore();
+  MX.restore();
 }
 
-function drawMap2D(W,H,ox=0,oy=0) {
-  mCtx.save();
-  mCtx.translate(ox,oy);
+function _m2d(ox,oy,W,H){
+  MX.save(); MX.translate(ox,oy);
+  MX.fillStyle='#030a03'; MX.fillRect(0,0,W,H);
 
-  // 2D 배경
-  mCtx.fillStyle='#030f03';
-  mCtx.fillRect(0,0,W,H);
+  // 자세한 그리드
+  MX.strokeStyle='rgba(0,40,12,.5)'; MX.lineWidth=.4;
+  for(let x=0;x<=W;x+=W/16){MX.beginPath();MX.moveTo(x,0);MX.lineTo(x,H);MX.stroke();}
+  for(let y=0;y<=H;y+=H/12){MX.beginPath();MX.moveTo(0,y);MX.lineTo(W,y);MX.stroke();}
 
-  // 그리드
-  mCtx.strokeStyle='rgba(0,60,15,0.4)';
-  mCtx.lineWidth=.5;
-  for(let x=0;x<W;x+=W/10){
-    mCtx.beginPath(); mCtx.moveTo(x,0); mCtx.lineTo(x,H); mCtx.stroke();
-  }
-  for(let y=0;y<H;y+=H/8){
-    mCtx.beginPath(); mCtx.moveTo(0,y); mCtx.lineTo(W,y); mCtx.stroke();
-  }
-
-  // 지형 (등고선)
-  for(let i=0;i<6;i++){
-    mCtx.strokeStyle=`rgba(0,${60+i*15},20,0.3)`;
-    mCtx.lineWidth=.8;
-    mCtx.beginPath();
-    for(let x=0;x<=W;x+=4){
-      const y = H*.4 + Math.sin(x*.015+i*.8+mapT*.2)*H*(.03+i*.02)
-               + Math.cos(x*.025+i*1.2)*H*.02;
-      x===0?mCtx.moveTo(x,y):mCtx.lineTo(x,y);
+  // 등고선 (5개)
+  for(let i=0;i<5;i++){
+    MX.strokeStyle=`rgba(0,${40+i*12},15,${.2+i*.05})`;
+    MX.lineWidth=.7;
+    MX.beginPath();
+    for(let x=0;x<=W;x+=3){
+      const y=H*.45+Math.sin(x*.012+i*.9+mapT*.15)*H*(.04+i*.018)
+               +Math.cos(x*.02+i*1.4+mapT*.1)*H*.015;
+      x===0?MX.moveTo(x,y):MX.lineTo(x,y);
     }
-    mCtx.stroke();
+    MX.stroke();
   }
 
-  // 드론 아이콘 2D
-  dronePos.forEach((dp,i)=>{
-    const px=dp.x*W, py=dp.y*H;
-    mCtx.strokeStyle='rgba(0,200,255,0.7)';
-    mCtx.lineWidth=1;
-    mCtx.setLineDash([2,4]);
-    mCtx.beginPath();
-    for(let j=0;j<8;j++){
-      const bx=px-Math.sin(mapT+i)*j*W*.003;
-      const by=py-Math.cos(mapT*.7+i)*j*H*.004;
-      j===0?mCtx.moveTo(bx,by):mCtx.lineTo(bx,by);
-    }
-    mCtx.stroke();
-    mCtx.setLineDash([]);
-    mCtx.fillStyle='#00cfff';
-    mCtx.beginPath();
-    mCtx.arc(px,py,4,0,Math.PI*2);
-    mCtx.fill();
-    mCtx.fillStyle='rgba(0,200,255,0.8)';
-    mCtx.font='8px Courier New';
-    mCtx.fillText(`URQ-0${i+1}`,px+6,py-4);
+  // 한반도 단순화 지도
+  MX.strokeStyle='rgba(0,180,60,.5)'; MX.lineWidth=1.5;
+  MX.beginPath();
+  const kp2=[.44,.22,.52,.26,.58,.36,.55,.46,.49,.62,.49,.70,.55,.60,.57,.42,.56,.30,.52,.24,.44,.22];
+  for(let i=0;i<kp2.length;i+=2)
+    i===0?MX.moveTo(kp2[i]*W,kp2[i+1]*H):MX.lineTo(kp2[i]*W,kp2[i+1]*H);
+  MX.stroke();
+
+  drones.forEach((d,i)=>{
+    const px=d.x*W, py=d.y*H;
+    MX.beginPath(); MX.arc(px,py,4,0,Math.PI*2);
+    MX.fillStyle='#00cfff'; MX.fill();
+    MX.fillStyle='rgba(0,200,255,.8)';
+    MX.font='7px Courier New';
+    MX.fillText('URQ-0'+(i+1),px+5,py-4);
   });
 
-  // 표적 2D
-  [{x:.47,y:.52,n:'2S19'},{x:.53,y:.42,n:'T-72'}].forEach((tg,i)=>{
+  tgts.forEach((tg,i)=>{
     const px=tg.x*W, py=tg.y*H;
-    const blink=Math.sin(mapT*4+i)*.5+.5;
-    mCtx.strokeStyle=`rgba(255,32,32,${.6+blink*.4})`;
-    mCtx.lineWidth=1.5;
-    mCtx.beginPath();
-    mCtx.moveTo(px-6,py-6); mCtx.lineTo(px+6,py-6);
-    mCtx.lineTo(px+6,py+6); mCtx.lineTo(px-6,py+6); mCtx.closePath();
-    mCtx.stroke();
-    mCtx.fillStyle='rgba(255,32,32,.6)';
-    mCtx.fill();
-    mCtx.fillStyle='#ff4040';
-    mCtx.font='8px Courier New';
-    mCtx.fillText(tg.n,px+9,py+3);
+    const b=Math.sin(mapT*4+i)*.5+.5;
+    MX.strokeStyle=`rgba(255,32,32,${.6+b*.4})`;
+    MX.lineWidth=1.5;
+    MX.strokeRect(px-5,py-5,10,10);
+    MX.fillStyle=tg.color+'44'; MX.fillRect(px-5,py-5,10,10);
+    MX.fillStyle=tg.color; MX.font='7px Courier New';
+    MX.fillText(tg.label,px+7,py+3);
   });
 
-  // 폭발 2D
   domes.forEach(d=>{
-    const p=1-d.life/120;
-    const r=p*Math.min(W,H)*.12;
-    mCtx.beginPath();
-    mCtx.arc(d.x*W,d.y*H,r,0,Math.PI*2);
-    mCtx.strokeStyle=`rgba(255,120,0,${.8*(1-p)})`;
-    mCtx.lineWidth=2;
-    mCtx.stroke();
+    const p=1-d.life/140, r=p*Math.min(W,H)*.1;
+    MX.beginPath(); MX.arc(d.x*W,d.y*H,r,0,Math.PI*2);
+    MX.strokeStyle=`rgba(255,120,0,${.7*(1-p)})`; MX.lineWidth=2; MX.stroke();
   });
 
-  if(mapMode==='split'){
-    mCtx.fillStyle='rgba(0,200,50,0.8)';
-    mCtx.font='8px Courier New';
-    mCtx.fillText('2D',8,12);
+  if(mapMode==='sp'){
+    MX.fillStyle='rgba(0,200,60,.7)'; MX.font='7px Courier New';
+    MX.fillText('2D',6,11);
   }
-
-  mCtx.restore();
+  MX.restore();
 }
 
-// ════════════════════════════════════
-// 교전 승인 로직
-// ════════════════════════════════════
-let tc1Step=0, tc2Step=0;
+function divLine(x,H){
+  MX.strokeStyle='#1a4a1a'; MX.lineWidth=1;
+  MX.beginPath(); MX.moveTo(x,0); MX.lineTo(x,H); MX.stroke();
+  MX.fillStyle='rgba(0,200,60,.7)'; MX.font='7px Courier New';
+  MX.fillText('3D',x-20,11);
+}
 
-function fireBtnClick(id){
+// =====================================================
+// 인터랙션
+// =====================================================
+function setMode(m,el){
+  mapMode=m;
+  document.querySelectorAll('.mb').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  const lbl={3d:'3D VIEW',2d:'2D TACTICAL',sp:'SPLIT VIEW'};
+  document.getElementById('mml').textContent=lbl[m];
+  log('ok','지도 모드: '+lbl[m]);
+}
+
+function doStrike(){
+  const rx=.35+Math.random()*.3, ry=.35+Math.random()*.3;
+  domes.push({x:rx,y:ry,life:140});
+  log('fr','💥 TEST STRIKE ('+rx.toFixed(2)+','+ry.toFixed(2)+')');
+}
+
+let s1s=0,s2s=0;
+function fire(id){
   if(id===1){
-    if(tc1Step===0){
-      tc1Step=1;
-      document.getElementById('btn-tc1').textContent='⚠️ 확인 (2/2)';
-      document.getElementById('btn-tc1').classList.add('confirm');
-      addLog('warn','TC1: 교전 승인 대기중... 확인 필요');
-    } else if(tc1Step===1){
-      tc1Step=2;
-      approveTarget(1);
-    }
+    if(s1s===0){s1s=1;document.getElementById('b1').textContent='⚠️ 확인? (2/2)';document.getElementById('b1').classList.add('cfm');log('wn','TC1 승인 대기... 확인 필요');}
+    else if(s1s===1){s1s=2;approve(1);}
   } else {
-    if(tc2Step===0){
-      tc2Step=1;
-      document.getElementById('btn-tc2').textContent='⚠️ 확인 (2/2)';
-      document.getElementById('btn-tc2').classList.add('confirm');
-      addLog('warn','TC2: 교전 승인 대기중... 확인 필요');
-    } else if(tc2Step===1){
-      tc2Step=2;
-      approveTarget(2);
-    }
+    if(s2s===0){s2s=1;document.getElementById('b2').textContent='⚠️ 확인? (2/2)';document.getElementById('b2').classList.add('cfm');log('wn','TC2 승인 대기... 확인 필요');}
+    else if(s2s===1){s2s=2;approve(2);}
   }
 }
 
-function approveTarget(id){
-  missions++;
-  targets = Math.max(0, targets-1);
-  document.getElementById('f-missions').textContent = missions;
-  document.getElementById('f-targets').textContent  = targets;
-  document.getElementById('mission-count').textContent = targets+' TARGETS';
-
-  const card  = document.getElementById('tc'+id);
-  const acts  = document.getElementById('tc'+id+'-actions');
-  card.classList.remove('active');
-  card.classList.add('approved');
-  acts.innerHTML = '<div class="btn-approved">✅ 교전 승인 완료</div>';
-
-  addLog('fire','🔴 J7 패킷 전송: 표적 TC'+id+' 교전 명령');
-  addLog('ok','✅ TC'+id+' 교전 승인 완료 — 피해 돔 렌더링');
-
-  // 폭발 돔 트리거
-  const pos = id===1 ? {x:.47,y:.52} : {x:.53,y:.42};
-  triggerDome(pos.x, pos.y);
+function approve(id){
+  missions++; targets=Math.max(0,targets-1);
+  document.getElementById('ft').textContent=targets;
+  document.getElementById('fm').textContent=missions;
+  document.getElementById('h-tgt').textContent=targets+' TARGETS';
+  document.getElementById('mc2').textContent=targets+' TARGETS';
+  document.getElementById('h-tc').textContent=targets>0?targets+' DETECTED':'CLEAR';
+  const card=document.getElementById('tc'+id);
+  card.classList.remove('hot'); card.classList.add('ok');
+  document.getElementById('a'+id).innerHTML='<div class="btn-apv">✅ 교전 승인 완료 — J7 전송</div>';
+  const pos=id===1?{x:.47,y:.52}:{x:.54,y:.41};
+  domes.push({x:pos.x,y:pos.y,life:140});
+  log('fr','🔴 J7 패킷 전송 — TC'+id+' 교전 명령');
+  log('ok','✅ TC'+id+' 승인 완료 — 피해도 렌더링 시작');
 }
 
-function triggerStrike(){
-  const rx = .4 + Math.random()*.2;
-  const ry = .35 + Math.random()*.3;
-  triggerDome(rx,ry);
-  addLog('fire','💥 TEST STRIKE 실행: ('+rx.toFixed(2)+', '+ry.toFixed(2)+')');
-}
-
-function triggerDome(x,y){
-  domes.push({x,y,life:120});
-}
-
-// ════════════════════════════════════
-// 지도 모드
-// ════════════════════════════════════
-function setMapMode(mode){
-  mapMode=mode;
-  document.querySelectorAll('.map-btn').forEach(b=>b.classList.remove('active'));
-  const labels={'3d':'3D CESIUM','2d':'2D TACTICAL','split':'SPLIT VIEW'};
-  document.getElementById('map-mode-label').textContent=labels[mode];
-  // 클릭된 버튼 active
-  event.target.classList.add('active');
-  addLog('ok','지도 모드 변경: '+labels[mode]);
-}
-
-// ════════════════════════════════════
-// 임무 로그
-// ════════════════════════════════════
-const logMsgs = [
-  ['ok',   'URQ-01 연결 확립 — 15fps 스트림'],
-  ['ok',   'URQ-02 연결 확립 — 15fps 스트림'],
-  ['ok',   'YOLOv8m ONNX 모델 로드 완료'],
-  ['warn', '표적 탐지: 2S19_MSTA (CONF 87%)'],
-  ['warn', '표적 탐지: T72_series (CONF 74%)'],
-  ['ok',   'WebSocket 레이턴시 46ms — 정상'],
+// =====================================================
+// 로그
+// =====================================================
+const bootLog=[
+  ['ok','우루루쾅 FSS v2.0 부팅...'],
+  ['ok','YOLOv8m ONNX 모델 로드 완료 — <35ms'],
+  ['ok','URQ-01 WebSocket 연결 확립 — 15fps'],
+  ['ok','URQ-02 WebSocket 연결 확립 — 15fps'],
+  ['wn','표적 탐지: 2S19_MSTA CONF 87%'],
+  ['wn','표적 탐지: T72_series CONF 74%'],
+  ['ok','엣지 리소스매니저 재직: CPU 31%'],
 ];
-let logIdx=0;
+let bli=0;
+function bootLogs(){if(bli<bootLog.length){log(bootLog[bli][0],bootLog[bli][1]);bli++;setTimeout(bootLogs,700);}}
 
-function addLog(type, msg){
-  const now=new Date().toLocaleTimeString('ko-KR',{hour12:false});
-  const div=document.createElement('div');
-  div.className='log-entry '+type;
-  div.innerHTML=`<span class="ts">[${now}]</span> <span class="msg">${msg}</span>`;
-  const container=document.getElementById('log-container');
-  container.prepend(div);
-  if(container.children.length>20) container.removeChild(container.lastChild);
+function log(type,msg){
+  const ts=new Date().toLocaleTimeString('ko-KR',{hour12:false});
+  const d=document.createElement('div');
+  d.className='le '+type;
+  d.innerHTML=`<span class="ts">[${ts}]</span> <span class="tx">${msg}</span>`;
+  const c=document.getElementById('log');
+  c.prepend(d);
+  if(c.children.length>25) c.removeChild(c.lastChild);
 }
 
-function autoLog(){
-  if(logIdx<logMsgs.length){
-    addLog(logMsgs[logIdx][0],logMsgs[logIdx][1]);
-    logIdx++;
-    setTimeout(autoLog,800);
-  }
-}
-
-// ════════════════════════════════════
-// 초기화
-// ════════════════════════════════════
-window.addEventListener('resize',()=>{
-  resizeDroneCanvas();
-  resizeMapCanvas();
-});
-resizeDroneCanvas();
-resizeMapCanvas();
-drawDroneFrame();
-drawMap();
-autoLog();
-
-// 3초 후 자동 드론 전환
-setInterval(()=>{
-  const ids=['URQ-01','URQ-02','URQ-01'];
-  const idx=Math.floor(Date.now()/5000)%2;
-  document.getElementById('drone-id').textContent=ids[idx]+' · 15fps';
-},5000);
-
-// 자동 로그 반복
 setInterval(()=>{
   const msgs=[
-    ['ok','레이턴시 체크: '+( 40+Math.floor(Math.random()*15))+'ms'],
-    ['ok','프레임 수신: '+frameIdx+'f'],
-    ['warn','표적 위치 갱신 — 이동 감지'],
-    ['ok','엣지 리소스: CPU 34% 정상'],
+    ['ok',`레이턴시 ${42+Math.floor(Math.random()*14)}ms — 정상`],
+    ['ok',`프레임 ${fIdx} — 탐지 지속`],
+    ['wn','표적 이동 감지 — 추적 업데이트'],
+    ['ok',`CPU ${28+Math.floor(Math.random()*12)}% · RAM 3.2GB`],
   ];
   const r=msgs[Math.floor(Math.random()*msgs.length)];
-  addLog(r[0],r[1]);
-},3000);
+  log(r[0],r[1]);
+},3500);
+
+// =====================================================
+// 초기화
+// =====================================================
+window.addEventListener('resize',()=>{resizeDC();resizeMC();});
+resizeDC(); resizeMC();
+drawDrone(); drawMap();
+bootLogs();
 </script>
 </body>
 </html>
